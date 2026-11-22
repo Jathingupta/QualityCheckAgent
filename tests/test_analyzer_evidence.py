@@ -55,6 +55,19 @@ def test_analyzer_prompt_requires_runtime_semantic_verification():
     assert "Do not label code defective just because it looks unusual." in SYSTEM_PROMPT
 
 
+def test_analyzer_prompt_requires_impact_and_severity_calibration():
+    from app.analyzer import SYSTEM_PROMPT
+
+    normalized_prompt = " ".join(SYSTEM_PROMPT.split())
+    assert "attacker-controlled input" in normalized_prompt
+    assert "reachable entry point" in normalized_prompt
+    assert "violated security property" in normalized_prompt
+    assert "signature forgery" in normalized_prompt
+    assert "does not by itself demonstrate" in normalized_prompt
+    assert "Calibrate severity to demonstrated impact and exploitability" in normalized_prompt
+    assert "Reserve critical/high for concrete severe consequences" in normalized_prompt
+
+
 def test_source_evidence_requires_exact_quote_and_matching_line():
     context = (
         "--- FILE: src/app.py ---\n"
