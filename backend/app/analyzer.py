@@ -115,7 +115,6 @@ Do not invent vulnerabilities.
 # Smaller batches and completions keep a single repository run within the free TPM budget.
 MAX_BATCH_CHARS = 4500
 MAX_COMPLETION_TOKENS = 1000
-MAX_RATE_LIMIT_RETRIES = 3
 
 
 def _parse_delay(value: str | None) -> float | None:
@@ -134,15 +133,14 @@ def _parse_delay(value: str | None) -> float | None:
     return sum(float(amount) * multipliers[unit] for amount, unit in matches)
 
 
-def _rate_limit_delay(response: httpx.Response, attempt: int) -> float:
-    """Prefer provider reset headers; otherwise use bounded exponential backoff."""
+def _rate_limit_delay(response: httpx.Response, attempt: int = 0) -> float | None:
+    """Return the provider's full retry delay without shortening its instructions."""
+    del attempt  # Retained for compatibility with existing callers and tests.
     headers = response.headers
     delay = _parse_delay(headers.get("retry-after"))
-    if delay is None:
-        delay = _parse_delay(headers.get("x-ratelimit-reset-tokens"))
-    if delay is None:
-        delay = min(2**attempt, 30)
-    return min(max(delay, 1.0), 60.0)
+    if delay is not None:
+        return delay
+    return _parse_delay(headers.get("x-ratelimit-reset-tokens"))
 
 
 def split_context(context: str, max_chars: int = MAX_BATCH_CHARS) -> list[str]:
@@ -199,26 +197,30 @@ async def _analyze_batch(settings: Settings, repository_name: str, context: str)
     }
 
     async with httpx.AsyncClient(timeout=120) as client:
-        response = None
-        for attempt in range(MAX_RATE_LIMIT_RETRIES + 1):
-            response = await client.post(
-                f"{settings.groq_base_url.rstrip('/')}/chat/completions",
-                headers={"Authorization": f"Bearer {settings.groq_api_key}"},
-                json=payload,
+        response = await client.post(
+            f"{settings.groq_base_url.rstrip('/')}/chat/completions",
+            headers={"Authorization": f"Bearer {settings.groq_api_key}"},
+            json=payload,
+        )
+        if response.status_code == 429:
+            retry_after = response.headers.get("retry-after")
+            reset_tokens = response.headers.get("x-ratelimit-reset-tokens")
+            retry_delay = _rate_limit_delay(response)
+            provider_error = response.text[:1200]
+            wait_message = (
+                f"Provider retry delay: {retry_delay:g} seconds."
+                if retry_delay is not None
+                else "The provider did not supply a usable retry delay."
             )
-            if response.status_code != 429:
-                break
-            if attempt == MAX_RATE_LIMIT_RETRIES:
-                retry_after = response.headers.get("retry-after")
-                reset_tokens = response.headers.get("x-ratelimit-reset-tokens")
-                raise RuntimeError(
-                    "Groq rate limit remained exhausted after "
-                    f"{MAX_RATE_LIMIT_RETRIES} retries. "
-                    f"Retry-After: {retry_after or 'not provided'}; "
-                    f"token reset: {reset_tokens or 'not provided'}. "
-                    "Wait for the token window to reset and retry."
-                )
-            await asyncio.sleep(_rate_limit_delay(response, attempt))
+            raise RuntimeError(
+                "Groq rate limit reached. The request was stopped immediately "
+                "instead of spending more time on premature retries. "
+                f"{wait_message} "
+                f"Retry-After: {retry_after or 'not provided'}; "
+                f"token reset: {reset_tokens or 'not provided'}. "
+                f"Provider response: {provider_error}. "
+                "Wait for the quota indicated by the provider to reset, then retry."
+            )
 
         if response.status_code == 400:
             raise RuntimeError(
