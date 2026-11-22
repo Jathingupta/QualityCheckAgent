@@ -27,3 +27,15 @@ def test_repository_context_skips_lockfiles_and_large_files(tmp_path: Path):
     assert included == ["src/main.py"]
     assert "package-lock.json" not in context
     assert "generated.py" not in context
+    assert "    1 | def main():" in context
+    assert "    2 |     return True" in context
+
+
+def test_repository_context_marks_truncated_file_excerpt(tmp_path: Path):
+    (tmp_path / "main.py").write_text("\n".join(f"line_{i}" for i in range(1, 900)), encoding="utf-8")
+
+    context, included = read_repository_context(tmp_path, max_files=10, max_chars=10000)
+
+    assert included == ["main.py"]
+    assert "    1 | line_1" in context
+    assert "[FILE EXCERPT TRUNCATED" in context
