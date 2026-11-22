@@ -160,8 +160,16 @@ async def _analyze_batch(settings: Settings, repository_name: str, context: str)
     try:
         data = json.loads(content)
     except json.JSONDecodeError as exc:
+        choice = response.json()["choices"][0]
+        start = max(0, exc.pos - 180)
+        end = min(len(content), exc.pos + 180)
+        excerpt = content[start:end].replace("\\n", " ")
         raise RuntimeError(
-            "Groq returned invalid JSON. The raw response did not match the requested JSON format."
+            "Groq returned invalid JSON. "
+            f"Finish reason: {choice.get('finish_reason', 'unknown')}; "
+            f"response length: {len(content)} characters; "
+            f"parse error at character {exc.pos}: {exc.msg}; "
+            f"nearby response text: {excerpt!r}"
         ) from exc
     if not isinstance(data, dict) or not isinstance(data.get("findings"), list):
         raise RuntimeError("Groq response did not match the report schema.")
