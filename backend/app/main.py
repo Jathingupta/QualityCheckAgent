@@ -5,11 +5,17 @@ from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, Response
 
 from app.analyzer import analyze_with_groq, normalize_findings
 from app.config import get_settings
-from app.reports import load_report, render_markdown, save_report
+from app.reports import (
+    load_report,
+    render_docx,
+    render_markdown,
+    safe_report_filename,
+    save_report,
+)
 from app.repository import clone_repository, read_repository_context
 from app.schemas import AnalysisReport, AnalyzeRequest
 
@@ -91,9 +97,27 @@ def get_report(report_id: str):
 def download_report(report_id: str):
     try:
         report = load_report(report_id, Path(settings.workspace_dir).resolve())
-        filename = f"quality-report-{report_id}.md"
+        filename = f"{safe_report_filename(report.repository_name)}.md"
         return PlainTextResponse(
             render_markdown(report),
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Report not found.") from exc
+
+
+
+@app.get("/api/reports/{report_id}/docx")
+def download_report_docx(report_id: str):
+    try:
+        report = load_report(report_id, Path(settings.workspace_dir).resolve())
+        filename = f"{safe_report_filename(report.repository_name)}.docx"
+        return Response(
+            content=render_docx(report),
+            media_type=(
+                "application/vnd.openxmlformats-officedocument."
+                "wordprocessingml.document"
+            ),
             headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
     except FileNotFoundError as exc:
