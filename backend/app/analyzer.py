@@ -37,6 +37,31 @@ because it is not visible in a partial excerpt. The relevant complete function o
 must be present to support such a claim.
 If the excerpt says it is truncated, treat absence-based conclusions as unverified.
 If a concern cannot be tied to exact supplied source text, do not report it as a finding.
+
+Before including each candidate finding, perform an adversarial semantic check:
+- Trace how the relevant value or call is actually evaluated at runtime.
+- Account for the surrounding class/function, callers, control flow, and relevant language
+  semantics visible in the supplied excerpts.
+- Check whether a language feature, decorator, descriptor, binding rule, default value,
+  inherited behavior, or standard library contract makes the code valid as written.
+- Distinguish a confirmed defect from a style concern, hypothetical risk, or unfamiliar
+  implementation pattern. Do not label code defective just because it looks unusual.
+- Consider at least one plausible benign explanation and reject the finding if that
+  explanation is consistent with the supplied code.
+- If the behavior depends on context that is not present, do not guess; omit the finding
+  or state the uncertainty as a limitation instead.
+
+Python-specific safeguards:
+- A function wrapped with @staticmethod, or assigned using staticmethod(...), is a
+  descriptor on the class. Access through an instance resolves to the underlying function;
+  do not claim that instance access returns a non-callable staticmethod object.
+- Account for @classmethod, property, decorators, descriptors, and normal method binding
+  before reporting callable or attribute-access defects.
+- Do not report a missing assignment or method merely because it is not in the excerpt;
+  inspect the complete relevant class/function when available.
+
+For every finding, the description must explain the runtime path from the quoted code to
+the claimed impact. The evidence quote alone is not proof of the impact.
 Return no more than three highest-confidence findings per batch.
 Keep strengths, limitations, and finding descriptions concise.
 Prioritize correctness, security, error handling, data integrity and edge cases.
