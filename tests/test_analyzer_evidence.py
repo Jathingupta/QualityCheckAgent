@@ -72,7 +72,10 @@ def test_analyzer_prompt_distinguishes_permissive_parsing_from_security_bypass()
     from app.analyzer import SYSTEM_PROMPT
 
     normalized_prompt = " ".join(SYSTEM_PROMPT.split())
-    assert "Do not automatically infer that downstream validation or security checks are bypassed." in normalized_prompt
+    assert (
+        "Do not automatically infer that downstream validation or security checks are bypassed."
+        in normalized_prompt
+    )
     assert "Follow the transformed value through its consumers." in normalized_prompt
     assert "security impact was not demonstrated" in normalized_prompt
     assert "do not prescribe stricter parsing as an automatic fix" in normalized_prompt
