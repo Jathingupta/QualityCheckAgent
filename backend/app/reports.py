@@ -18,9 +18,10 @@ def safe_report_filename(repository_name: str) -> str:
 def _severity_counts(report: AnalysisReport) -> dict[str, int]:
     severities = ("critical", "high", "medium", "low", "info")
     return {
-    severity: sum(item.severity == severity for item in report.findings)
-    for severity in severities
-        }
+        severity: sum(item.severity == severity for item in report.findings)
+        for severity in severities
+    }
+
 
 def render_markdown(report: AnalysisReport) -> str:
     counts = _severity_counts(report)
@@ -48,7 +49,8 @@ def render_markdown(report: AnalysisReport) -> str:
     ]
     if not report.findings:
         lines.append(
-            "No concrete findings were returned. This does not prove the repository is defect-free."
+            "No evidence-backed findings were retained from the selected excerpts. "
+            "This does not prove the repository is defect-free."
         )
         lines.append("")
     for index, item in enumerate(report.findings, 1):
@@ -58,7 +60,13 @@ def render_markdown(report: AnalysisReport) -> str:
             "",
             f"**Location:** `{location}`",
             "",
-            "**Evidence and impact**",
+            "**Source evidence**",
+            "",
+            "```text",
+            item.evidence or "No source excerpt supplied.",
+            "```",
+            "",
+            "**Assessment and impact**",
             "",
             item.description,
             "",
@@ -135,7 +143,8 @@ def render_docx(report: AnalysisReport) -> bytes:
     document.add_heading("Detailed Findings", level=1)
     if not report.findings:
         document.add_paragraph(
-            "No concrete findings were returned. This does not prove the repository is defect-free."
+            "No evidence-backed findings were retained from the selected excerpts. "
+            "This does not prove the repository is defect-free."
         )
     for index, finding in enumerate(report.findings, 1):
         document.add_heading(
@@ -146,7 +155,13 @@ def render_docx(report: AnalysisReport) -> bytes:
         paragraph.add_run("Location: ").bold = True
         paragraph.add_run(location)
         paragraph = document.add_paragraph()
-        paragraph.add_run("Evidence and impact").bold = True
+        paragraph.add_run("Source evidence").bold = True
+        evidence_paragraph = document.add_paragraph()
+        evidence_run = evidence_paragraph.add_run(finding.evidence or "No source excerpt supplied.")
+        evidence_run.font.name = "Consolas"
+        evidence_run.font.size = Pt(9)
+        paragraph = document.add_paragraph()
+        paragraph.add_run("Assessment and impact").bold = True
         document.add_paragraph(finding.description)
         paragraph = document.add_paragraph()
         paragraph.add_run("Recommended action").bold = True
