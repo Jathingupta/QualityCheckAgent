@@ -4,23 +4,58 @@ from app.schemas import AnalysisReport
 
 
 def render_markdown(report: AnalysisReport) -> str:
-    lines = [f"# Quality Analysis: {report.repository_name}", "", f"Repository: {report.repository_url}", f"Generated: {report.generated_at}", "", "## Summary", "", report.summary, "", "## Findings", ""]
+    lines = [
+        f"# Quality Analysis: {report.repository_name}",
+        "",
+        f"Repository: {report.repository_url}",
+        f"Generated: {report.generated_at}",
+        "",
+        "## Summary",
+        "",
+        report.summary,
+        "",
+        "## Findings",
+        "",
+    ]
     if not report.findings:
-        lines.append("No concrete findings were returned. This does not prove the repository is defect-free.")
+        lines.append(
+            "No concrete findings were returned. "
+            "This does not prove the repository is defect-free."
+        )
     for index, item in enumerate(report.findings, 1):
         location = item.file + (f":{item.line}" if item.line else "")
-        lines += [f"### {index}. [{item.severity.upper()}] {item.title}", "", f"Location: `{location}`", "", item.description, "", f"Recommendation: {item.recommendation}", ""]
-    lines += ["## Strengths", ""] + [f"- {x}" for x in report.strengths]
-    lines += ["", "## Limitations", ""] + [f"- {x}" for x in report.limitations]
-    lines += ["", "> AI-assisted static review only. No repository code, tests or official QPB verification gates were executed.", ""]
+        lines += [
+            f"### {index}. [{item.severity.upper()}] {item.title}",
+            "",
+            f"Location: `{location}`",
+            "",
+            item.description,
+            "",
+            f"Recommendation: {item.recommendation}",
+            "",
+        ]
+    lines += ["## Strengths", ""] + [f"- {item}" for item in report.strengths]
+    lines += ["", "## Limitations", ""] + [
+        f"- {item}" for item in report.limitations
+    ]
+    lines += [
+        "",
+        (
+            "> AI-assisted static review only. No repository code, tests "
+            "or official QPB verification gates were executed."
+        ),
+        "",
+    ]
     return "\n".join(lines)
 
 
 def save_report(report: AnalysisReport, workspace: Path) -> None:
     folder = workspace / "reports"
     folder.mkdir(parents=True, exist_ok=True)
-    (folder / f"{report.report_id}.json").write_text(report.model_dump_json(indent=2), encoding="utf-8")
-    (folder / f"{report.report_id}.md").write_text(render_markdown(report), encoding="utf-8")
+    json_path = folder / f"{report.report_id}.json"
+    markdown_path = folder / f"{report.report_id}.md"
+    json_path.write_text(report.model_dump_json(indent=2), encoding="utf-8")
+    markdown_path.write_text(render_markdown(report), encoding="utf-8")
 
 
 def load_report(report_id: str, workspace: Path) -> AnalysisReport:
