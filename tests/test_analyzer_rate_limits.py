@@ -21,34 +21,33 @@ def test_parse_delay_supports_seconds_and_compound_durations():
     assert _parse_delay("unknown") is None
 
 
-def test_rate_limit_delay_prefers_retry_after_header():
+def test_rate_limit_delay_preserves_full_retry_after_value():
     response = httpx.Response(
         429,
         headers={
-            "retry-after": "3",
-            "x-ratelimit-reset-tokens": "8.5s",
+            "retry-after": "387",
+            "x-ratelimit-reset-tokens": "1ms",
         },
         request=httpx.Request("POST", "https://api.groq.com"),
     )
 
-    assert _rate_limit_delay(response, attempt=0) == 3.0
+    assert _rate_limit_delay(response) == 387.0
 
 
-def test_rate_limit_delay_uses_token_reset_header():
+def test_rate_limit_delay_uses_token_reset_when_retry_after_missing():
     response = httpx.Response(
         429,
         headers={"x-ratelimit-reset-tokens": "8.5s"},
         request=httpx.Request("POST", "https://api.groq.com"),
     )
 
-    assert _rate_limit_delay(response, attempt=0) == 8.5
+    assert _rate_limit_delay(response) == 8.5
 
 
-def test_rate_limit_delay_uses_bounded_backoff_without_headers():
+def test_rate_limit_delay_returns_none_without_provider_headers():
     response = httpx.Response(
         429,
         request=httpx.Request("POST", "https://api.groq.com"),
     )
 
-    assert _rate_limit_delay(response, attempt=0) == 1.0
-    assert _rate_limit_delay(response, attempt=5) == 30.0
+    assert _rate_limit_delay(response) is None
