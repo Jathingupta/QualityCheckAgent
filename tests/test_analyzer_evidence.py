@@ -48,9 +48,10 @@ def test_analyzer_prompt_requires_runtime_semantic_verification():
 
     assert "perform an adversarial semantic check" in SYSTEM_PROMPT
     assert "underlying function" in SYSTEM_PROMPT
-    assert "from __future__ import annotations" in SYSTEM_PROMPT
-    assert "names used only in annotations are not evaluated" in SYSTEM_PROMPT
-    assert "runtime path from the quoted code to" in SYSTEM_PROMPT
+    normalized_prompt = " ".join(SYSTEM_PROMPT.split())
+    assert "from __future__ import annotations" in normalized_prompt
+    assert "names used only in annotations are not evaluated" in normalized_prompt
+    assert "runtime path from the quoted code to" in normalized_prompt
     assert "Do not label code defective just because it looks unusual." in SYSTEM_PROMPT
 
 
