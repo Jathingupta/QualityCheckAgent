@@ -186,6 +186,39 @@ async def _analyze_batch(settings: Settings, repository_name: str, context: str)
     return data
 
 
+def _source_evidence_is_valid(finding: dict, context: str) -> bool:
+    """Require the quoted evidence and cited line to exist in the named source excerpt."""
+    file_name = str(finding.get("file", "")).strip()
+    evidence = finding.get("evidence")
+    line_number = finding.get("line")
+    if not file_name or not isinstance(evidence, str) or not evidence.strip():
+        return False
+
+    sections = re.split(r"(?m)^--- FILE: (.+?) ---\\n", context)
+    for index in range(1, len(sections), 2):
+        if sections[index].strip() != file_name:
+            continue
+        source_lines = {}
+        for source_line in sections[index + 1].splitlines():
+            match = re.match(r"^\\s*(\\d+) \\| (.*)$", source_line)
+            if match:
+                source_lines[int(match.group(1))] = match.group(2)
+        normalized_evidence = " ".join(evidence.split())
+        if not normalized_evidence:
+            return False
+        if isinstance(line_number, int) and not isinstance(line_number, bool):
+            if line_number not in source_lines:
+                return False
+            window = " ".join(
+                source_lines.get(number, "")
+                for number in range(line_number, line_number + 6)
+            )
+            return normalized_evidence in " ".join(window.split())
+        full_source = " ".join(" ".join(source_lines.values()).split())
+        return normalized_evidence in full_source
+    return False
+
+
 async def analyze_with_groq(settings: Settings, repository_name: str, context: str) -> dict:
     if not settings.groq_api_key:
         raise RuntimeError("GROQ_API_KEY is missing. Add it to .env and restart the backend.")
@@ -224,7 +257,7 @@ async def analyze_with_groq(settings: Settings, repository_name: str, context: s
             if not isinstance(finding, dict):
                 continue
             evidence = finding.get("evidence")
-            if not isinstance(evidence, str) or not evidence.strip():
+            if not _source_evidence_is_valid(finding, context):
                 unverified_findings += 1
                 continue
             key = (
