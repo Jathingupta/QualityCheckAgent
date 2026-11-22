@@ -7,7 +7,7 @@ Local-first GitHub repository analyzer using FastAPI, React, Vite and Groq.
 - Shallow-clones repositories with a timeout.
 - Inspects a bounded set of text/source files; skips common dependency/build folders and secret-like files.
 - Uses Groq's OpenAI-compatible chat completions API for evidence-based static review.
-- Displays findings, severity, file references, recommendations and a Markdown report download.
+- Displays findings, severity, file references, recommendations, and downloadable Markdown and Word reports named after the analyzed repository.
 - Does not execute repository code or tests.
 
 ## QPB integration status — read carefully
@@ -45,6 +45,7 @@ Open http://localhost:5173.
 - `POST /api/analyze` body `{"repository_url":"https://github.com/owner/repo"}`
 - `GET /api/reports/{report_id}`
 - `GET /api/reports/{report_id}/markdown`
+- `GET /api/reports/{report_id}/docx`
 
 ## Safety and limitations
 Only public GitHub HTTPS URLs are accepted. Clone timeout and context/file limits are applied. Repository content is untrusted; prompt injection text in files must not be followed. No repository code is executed. Do not analyze private company repositories until company approval and security/data-handling review. Model output is not proof that a defect exists; verify findings manually.
