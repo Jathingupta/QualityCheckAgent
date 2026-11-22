@@ -1,5 +1,4 @@
 import pytest
-
 from app.repository import validate_github_url
 
 

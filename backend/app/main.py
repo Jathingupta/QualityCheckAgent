@@ -8,8 +8,8 @@ from fastapi.responses import PlainTextResponse
 
 from app.analyzer import analyze_with_groq, normalize_findings
 from app.config import get_settings
-from app.repository import clone_repository, read_repository_context
 from app.reports import load_report, render_markdown, save_report
+from app.repository import clone_repository, read_repository_context
 from app.schemas import AnalysisReport, AnalyzeRequest
 
 settings = get_settings()
