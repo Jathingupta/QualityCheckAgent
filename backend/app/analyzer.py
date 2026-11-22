@@ -165,6 +165,7 @@ async def _analyze_batch(settings: Settings, repository_name: str, context: str)
         "model": settings.groq_model,
         "temperature": 0.1,
         "max_completion_tokens": MAX_COMPLETION_TOKENS,
+        "response_format": {"type": "json_object"},
         "reasoning_effort": "low",
         "include_reasoning": False,
         "messages": [
@@ -238,8 +239,28 @@ async def _analyze_batch(settings: Settings, repository_name: str, context: str)
             f"parse error at character {exc.pos}: {exc.msg}; "
             f"nearby response text: {excerpt!r}"
         ) from exc
-    if not isinstance(data, dict) or not isinstance(data.get("findings"), list):
-        raise RuntimeError("Groq response did not match the report schema.")
+    if not isinstance(data, dict):
+        raise RuntimeError(
+            "Groq returned JSON, but the top-level value was "
+            f"{type(data).__name__}, not an object. "
+            f"Finish reason: {choice.get('finish_reason', 'unknown')}."
+        )
+    if not isinstance(data.get("findings"), list):
+        keys = ", ".join(sorted(str(key) for key in data.keys())) or "(none)"
+        field_types = ", ".join(
+            f"{key}={type(value).__name__}"
+            for key, value in data.items()
+        )
+        preview = content[:600].replace("\\n", " ")
+        raise RuntimeError(
+            "Groq returned a JSON object, but it did not contain the required "
+            "'findings' array. "
+            f"Top-level keys: {keys}. Field types: {field_types}. "
+            f"Finish reason: {choice.get('finish_reason', 'unknown')}. "
+            f"Response preview: {preview!r}."
+        )
+    data.setdefault("strengths", [])
+    data.setdefault("limitations", [])
     return data
 
 
