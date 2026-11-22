@@ -94,6 +94,18 @@ Impact and security verification:
   Use medium/low for bounded correctness, robustness, or validation concerns when impact
   is limited or not demonstrated. If impact cannot be established, omit the finding or
   clearly label the uncertainty rather than inflating severity.
+- When reporting permissive parsing, decoding, or normalization, describe the exact
+  transformation as the observed behavior. Do not automatically infer that downstream
+  validation or security checks are bypassed.
+- Follow the transformed value through its consumers. If a signature, MAC, authentication,
+  authorization, or integrity check is applied before the value is trusted or acted upon,
+  explain what that check covers and whether the observed transformation can actually
+  evade it. Do not imply a bypass merely because decoding accepts unusual input.
+- If the source supports only a robustness/input-validation concern, title and describe it
+  as such. Explicitly state that security impact was not demonstrated when relevant.
+  Recommend stricter parsing only when the accepted input behavior violates a stated
+  contract or creates a concrete compatibility, correctness, or security problem; do not
+  prescribe stricter parsing as an automatic fix.
 Return no more than three highest-confidence findings per batch.
 Keep strengths, limitations, and finding descriptions concise.
 Prioritize correctness, security, error handling, data integrity and edge cases.
