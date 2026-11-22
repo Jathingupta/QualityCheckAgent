@@ -9,7 +9,15 @@ def test_accepts_github_url():
     assert name == "octocat/Hello-World"
 
 
-@pytest.mark.parametrize("url", ["http://github.com/a/b", "https://example.com/a/b", "https://github.com/", "file:///tmp/x"])
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://github.com/a/b",
+        "https://example.com/a/b",
+        "https://github.com/",
+        "file:///tmp/x",
+    ],
+)
 def test_rejects_unsupported_urls(url):
     with pytest.raises(ValueError):
         validate_github_url(url)
