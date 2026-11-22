@@ -122,6 +122,11 @@ async def _analyze_batch(settings: Settings, repository_name: str, context: str)
             headers={"Authorization": f"Bearer {settings.groq_api_key}"},
             json=payload,
         )
+        if response.status_code == 400:
+            # Groq's response body contains the actionable validation message.
+            raise RuntimeError(
+                f"Groq rejected the request (HTTP 400): {response.text[:2000]}"
+            )
         response.raise_for_status()
     message = response.json()["choices"][0]["message"]
     content = message.get("content")
