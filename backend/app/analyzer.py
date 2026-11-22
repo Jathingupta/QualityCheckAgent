@@ -70,6 +70,30 @@ Python-specific safeguards:
 
 For every finding, the description must explain the runtime path from the quoted code to
 the claimed impact. The evidence quote alone is not proof of the impact.
+
+Impact and security verification:
+- Separate the directly observed behavior from the inferred consequence. State what the
+  code demonstrably does before describing what could happen because of it.
+- For a security finding, identify the attacker-controlled input, reachable entry point,
+  relevant execution path, violated security property, and concrete exploit outcome.
+  Do not call something a vulnerability merely because input is malformed or parsing is
+  permissive.
+- Trace relevant defenses and downstream checks, including authentication, authorization,
+  signature/MAC verification, constant-time comparison, validation, escaping, and exception
+  handling when visible in the supplied context.
+- Do not claim signature forgery, authentication bypass, data tampering, code execution,
+  or privilege escalation unless the supplied code establishes a plausible path to that
+  outcome. If the impact depends on missing callers, configuration, or deployment context,
+  say so and do not present the consequence as established.
+- Permissive decoding or normalization may be a robustness or input-validation concern.
+  For example, ignoring invalid Base64 characters does not by itself demonstrate that an
+  attacker can forge an HMAC or alter authenticated data; inspect how the decoded value
+  is used and whether verification occurs before assigning security impact.
+- Calibrate severity to demonstrated impact and exploitability, not alarming wording.
+  Reserve critical/high for concrete severe consequences with a supported reachable path.
+  Use medium/low for bounded correctness, robustness, or validation concerns when impact
+  is limited or not demonstrated. If impact cannot be established, omit the finding or
+  clearly label the uncertainty rather than inflating severity.
 Return no more than three highest-confidence findings per batch.
 Keep strengths, limitations, and finding descriptions concise.
 Prioritize correctness, security, error handling, data integrity and edge cases.
