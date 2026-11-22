@@ -43,6 +43,15 @@ def test_finding_evidence_defaults_for_older_saved_reports():
     assert finding.evidence == ""
 
 
+def test_analyzer_prompt_requires_runtime_semantic_verification():
+    from app.analyzer import SYSTEM_PROMPT
+
+    assert "perform an adversarial semantic check" in SYSTEM_PROMPT
+    assert "underlying function" in SYSTEM_PROMPT
+    assert "runtime path from the quoted code to" in SYSTEM_PROMPT
+    assert "Do not label code defective just because it looks unusual." in SYSTEM_PROMPT
+
+
 def test_source_evidence_requires_exact_quote_and_matching_line():
     context = (
         "--- FILE: src/app.py ---\n"
