@@ -16,57 +16,6 @@ Prioritize correctness, security, error handling, data integrity and edge cases.
 Do not invent vulnerabilities.
 """
 
-# GPT-OSS 20B supports strict structured outputs on Groq.
-ANALYSIS_RESPONSE_FORMAT = {
-    "type": "json_schema",
-    "json_schema": {
-        "name": "repository_quality_review",
-        "strict": True,
-        "schema": {
-            "type": "object",
-            "properties": {
-                "summary": {"type": "string"},
-                "strengths": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                },
-                "limitations": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                },
-                "findings": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "title": {"type": "string"},
-                            "severity": {
-                                "type": "string",
-                                "enum": ["critical", "high", "medium", "low", "info"],
-                            },
-                            "file": {"type": "string"},
-                            "line": {"type": ["integer", "null"]},
-                            "description": {"type": "string"},
-                            "recommendation": {"type": "string"},
-                        },
-                        "required": [
-                            "title",
-                            "severity",
-                            "file",
-                            "line",
-                            "description",
-                            "recommendation",
-                        ],
-                        "additionalProperties": False,
-                    },
-                },
-            },
-            "required": ["summary", "strengths", "limitations", "findings"],
-            "additionalProperties": False,
-        },
-    },
-}
-
 # Keep each provider request comfortably below common HTTP body limits.
 MAX_BATCH_CHARS = 9000
 
@@ -103,7 +52,8 @@ async def _analyze_batch(settings: Settings, repository_name: str, context: str)
         "model": settings.groq_model,
         "temperature": 0.1,
         "max_tokens": 2500,
-        "response_format": ANALYSIS_RESPONSE_FORMAT,
+        # JSON Object mode avoids Groq's schema-generation validation failures.
+        "response_format": {"type": "json_object"},
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {
