@@ -209,11 +209,8 @@ def _source_evidence_is_valid(finding: dict, context: str) -> bool:
         if isinstance(line_number, int) and not isinstance(line_number, bool):
             if line_number not in source_lines:
                 return False
-            window = " ".join(
-                source_lines.get(number, "")
-                for number in range(line_number, line_number + 6)
-            )
-            return normalized_evidence in " ".join(window.split())
+            cited_line = " ".join(source_lines[line_number].split())
+            return normalized_evidence in cited_line
         full_source = " ".join(" ".join(source_lines.values()).split())
         return normalized_evidence in full_source
     return False
