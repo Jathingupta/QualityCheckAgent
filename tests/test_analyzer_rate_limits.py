@@ -1,5 +1,4 @@
 import httpx
-
 from app.analyzer import (
     MAX_BATCH_CHARS,
     MAX_COMPLETION_TOKENS,
@@ -51,5 +50,5 @@ def test_rate_limit_delay_uses_bounded_backoff_without_headers():
         request=httpx.Request("POST", "https://api.groq.com"),
     )
 
-    assert _rate_limit_delay(response, attempt=0) == 2.0
-    assert _rate_limit_delay(response, attempt=5) == 32.0
+    assert _rate_limit_delay(response, attempt=0) == 1.0
+    assert _rate_limit_delay(response, attempt=5) == 30.0
