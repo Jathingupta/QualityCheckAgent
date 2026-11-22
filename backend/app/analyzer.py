@@ -256,7 +256,6 @@ async def analyze_with_groq(settings: Settings, repository_name: str, context: s
         for finding in item.get("findings", []):
             if not isinstance(finding, dict):
                 continue
-            evidence = finding.get("evidence")
             if not _source_evidence_is_valid(finding, context):
                 unverified_findings += 1
                 continue
@@ -322,7 +321,11 @@ def normalize_findings(raw: list[dict]) -> list[Finding]:
             title=str(item.get("title", "Untitled"))[:240],
             severity=severity,
             file=str(item.get("file", "Not specified"))[:500],
-            line=line if isinstance(line, int) and not isinstance(line, bool) and line > 0 else None,
+            line=(
+                line
+                if isinstance(line, int) and not isinstance(line, bool) and line > 0
+                else None
+            ),
             evidence=evidence.strip()[:1000],
             description=str(item.get("description", ""))[:3000],
             recommendation=str(item.get("recommendation", ""))[:2000],
