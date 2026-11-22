@@ -14,7 +14,13 @@ from app.schemas import AnalysisReport, AnalyzeRequest
 
 settings = get_settings()
 app = FastAPI(title="QualityCheckAgent API", version="0.2.0")
-app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"], allow_credentials=False, allow_methods=["GET", "POST"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")
@@ -33,16 +39,35 @@ async def analyze(request: AnalyzeRequest):
     workspace = Path(settings.workspace_dir).resolve()
     repo_dir = workspace / "repositories" / report_id
     try:
-        repo_name = clone_repository(str(request.repository_url), repo_dir, settings.clone_timeout_seconds)
-        context, included = read_repository_context(repo_dir, settings.max_files, settings.max_context_chars)
+        repo_name = clone_repository(
+            str(request.repository_url),
+            repo_dir,
+            settings.clone_timeout_seconds,
+        )
+        context, included = read_repository_context(
+            repo_dir,
+            settings.max_files,
+            settings.max_context_chars,
+        )
         if not context.strip():
             raise RuntimeError("No supported text files were found in this repository.")
         result = await analyze_with_groq(settings, repo_name, context)
-        report = AnalysisReport(report_id=report_id, repository_url=str(request.repository_url), repository_name=repo_name,
-            summary=str(result.get("summary", "Analysis completed."))[:4000], findings=normalize_findings(result.get("findings", [])),
-            strengths=[str(x)[:500] for x in result.get("strengths", [])[:20]],
-            limitations=[*[str(x)[:500] for x in result.get("limitations", [])[:20]], f"Inspected {len(included)} selected text files; code was not executed."],
-            generated_at=datetime.now(timezone.utc).isoformat())
+        report = AnalysisReport(
+            report_id=report_id,
+            repository_url=str(request.repository_url),
+            repository_name=repo_name,
+            summary=str(result.get("summary", "Analysis completed."))[:4000],
+            findings=normalize_findings(result.get("findings", [])),
+            strengths=[str(item)[:500] for item in result.get("strengths", [])[:20]],
+            limitations=[
+                *[str(item)[:500] for item in result.get("limitations", [])[:20]],
+                (
+                    f"Inspected {len(included)} selected text files; "
+                    "code was not executed."
+                ),
+            ],
+            generated_at=datetime.now(timezone.utc).isoformat(),
+        )
         save_report(report, workspace)
         return report
     except ValueError as exc:
@@ -63,6 +88,10 @@ def get_report(report_id: str):
 def download_report(report_id: str):
     try:
         report = load_report(report_id, Path(settings.workspace_dir).resolve())
-        return PlainTextResponse(render_markdown(report), headers={"Content-Disposition": f'attachment; filename="quality-report-{report_id}.md"'})
+        filename = f"quality-report-{report_id}.md"
+        return PlainTextResponse(
+            render_markdown(report),
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Report not found.") from exc
