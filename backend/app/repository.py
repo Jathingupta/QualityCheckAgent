@@ -65,6 +65,31 @@ def _file_priority(path: Path, relative: str) -> tuple[int, int, str]:
     return priority, len(path.parts), relative.lower()
 
 
+def _numbered_excerpt(content: str, limit: int = MAX_FILE_CHARS) -> str:
+    """Add original 1-based line numbers and explicitly mark incomplete excerpts."""
+    lines = content.splitlines()
+    numbered = []
+    used = 0
+    for line_number, line in enumerate(lines, start=1):
+        rendered = f"{line_number:>5} | {line}"
+        remaining = limit - used
+        if len(rendered) + 1 > remaining:
+            if remaining > 24:
+                numbered.append(
+                    f"{line_number:>5} | [LINE TRUNCATED: source line exceeds excerpt budget]"
+                )
+            numbered.append(
+                f"       | [FILE EXCERPT TRUNCATED; source continues after line "
+                f"{line_number - 1}]"
+            )
+            break
+        numbered.append(rendered)
+        used += len(rendered) + 1
+    else:
+        return "\n".join(numbered)
+    return "\n".join(numbered)
+
+
 def read_repository_context(root: Path, max_files: int, max_chars: int) -> tuple[str, list[str]]:
     candidates = []
     for path in root.rglob("*"):
@@ -93,7 +118,8 @@ def read_repository_context(root: Path, max_files: int, max_chars: int) -> tuple
             continue
         if not content.strip() or "\x00" in content:
             continue
-        block = f"\n--- FILE: {relative} ---\n{content[:MAX_FILE_CHARS]}\n"
+        excerpt = _numbered_excerpt(content)
+        block = f"\n--- FILE: {relative} ---\n{excerpt}\n"
         if used + len(block) > max_chars:
             continue
         chunks.append(block)
