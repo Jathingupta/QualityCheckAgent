@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -12,6 +13,7 @@ from app.reports import load_report, render_markdown, save_report
 from app.repository import clone_repository, read_repository_context
 from app.schemas import AnalysisReport, AnalyzeRequest
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
 app = FastAPI(title="QualityCheckAgent API", version="0.2.0")
 app.add_middleware(
@@ -73,6 +75,7 @@ async def analyze(request: AnalyzeRequest):
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
+        logger.exception("Repository analysis failed for %s", request.repository_url)
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
