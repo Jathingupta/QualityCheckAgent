@@ -1,9 +1,8 @@
 from io import BytesIO
 
-from docx import Document
-
 from app.reports import render_docx, render_markdown, safe_report_filename
 from app.schemas import AnalysisReport, Finding
+from docx import Document
 
 
 def sample_report() -> AnalysisReport:

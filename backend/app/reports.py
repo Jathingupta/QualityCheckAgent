@@ -17,8 +17,10 @@ def safe_report_filename(repository_name: str) -> str:
 
 def _severity_counts(report: AnalysisReport) -> dict[str, int]:
     severities = ("critical", "high", "medium", "low", "info")
-    return {severity: sum(item.severity == severity for item in report.findings) for severity in severities}
-
+    return {
+    severity: sum(item.severity == severity for item in report.findings)
+    for severity in severities
+        }
 
 def render_markdown(report: AnalysisReport) -> str:
     counts = _severity_counts(report)
