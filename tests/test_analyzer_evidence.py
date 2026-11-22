@@ -1,4 +1,7 @@
-from app.analyzer import normalize_findings
+from app.analyzer import (
+    _source_evidence_is_valid,
+    normalize_findings,
+)
 from app.schemas import Finding
 
 
@@ -38,3 +41,32 @@ def test_finding_evidence_defaults_for_older_saved_reports():
     )
 
     assert finding.evidence == ""
+
+
+def test_source_evidence_requires_exact_quote_and_matching_line():
+    context = (
+        "--- FILE: src/app.py ---\n"
+        "   10 | def handler(value):\n"
+        "   11 |     cleaned = value.strip()\n"
+        "   12 |     unsafe_call(cleaned)\n"
+        "   13 |     return True\n"
+    )
+    finding = {
+        "file": "src/app.py",
+        "line": 12,
+        "evidence": "unsafe_call(cleaned)",
+    }
+
+    assert _source_evidence_is_valid(finding, context)
+    assert not _source_evidence_is_valid(
+        {**finding, "line": 11},
+        context,
+    )
+    assert not _source_evidence_is_valid(
+        {**finding, "evidence": "missing_call(value)"},
+        context,
+    )
+    assert not _source_evidence_is_valid(
+        {**finding, "file": "src/other.py"},
+        context,
+    )
