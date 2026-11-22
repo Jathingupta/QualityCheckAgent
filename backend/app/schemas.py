@@ -10,6 +10,7 @@ class Finding(BaseModel):
     severity: str = Field(pattern="^(critical|high|medium|low|info)$")
     file: str = "Not specified"
     line: int | None = None
+    evidence: str = ""
     description: str
     recommendation: str
 
