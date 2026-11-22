@@ -60,6 +60,19 @@ async def analyze(request: AnalyzeRequest):
         if not context.strip():
             raise RuntimeError("No supported text files were found in this repository.")
         result = await analyze_with_groq(settings, repo_name, context)
+        omitted = result.get("unverified_findings", 0)
+        report_limitations = [
+            *[str(item)[:500] for item in result.get("limitations", [])[:20]],
+            (
+                f"Inspected {len(included)} selected text files; "
+                "code was not executed."
+            ),
+        ]
+        if omitted:
+            report_limitations.append(
+                f"Omitted {omitted} model-suggested finding(s) because they lacked "
+                "a source evidence excerpt."
+            )
         report = AnalysisReport(
             report_id=report_id,
             repository_url=str(request.repository_url),
@@ -67,13 +80,7 @@ async def analyze(request: AnalyzeRequest):
             summary=str(result.get("summary", "Analysis completed."))[:4000],
             findings=normalize_findings(result.get("findings", [])),
             strengths=[str(item)[:500] for item in result.get("strengths", [])[:20]],
-            limitations=[
-                *[str(item)[:500] for item in result.get("limitations", [])[:20]],
-                (
-                    f"Inspected {len(included)} selected text files; "
-                    "code was not executed."
-                ),
-            ],
+            limitations=report_limitations,
             generated_at=datetime.now(timezone.utc).isoformat(),
         )
         save_report(report, workspace)
@@ -104,7 +111,6 @@ def download_report(report_id: str):
         )
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Report not found.") from exc
-
 
 
 @app.get("/api/reports/{report_id}/docx")
