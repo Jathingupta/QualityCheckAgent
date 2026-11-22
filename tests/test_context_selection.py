@@ -32,7 +32,8 @@ def test_repository_context_skips_lockfiles_and_large_files(tmp_path: Path):
 
 
 def test_repository_context_marks_truncated_file_excerpt(tmp_path: Path):
-    (tmp_path / "main.py").write_text("\n".join(f"line_{i}" for i in range(1, 900)), encoding="utf-8")
+    content = "\n".join(f"line_{i}" for i in range(1, 900))
+    (tmp_path / "main.py").write_text(content, encoding="utf-8")
 
     context, included = read_repository_context(tmp_path, max_files=10, max_chars=10000)
 
