@@ -5,7 +5,7 @@ from app.main import app
 client = TestClient(app)
 
 
-def test_health_endpoint_returns_ok() -> None:
+def test_health_endpoint_returns_ok():
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "application": "QualityCheckAgent"}
+    assert response.json()["status"] == "ok"

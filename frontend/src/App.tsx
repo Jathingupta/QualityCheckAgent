@@ -1,46 +1,17 @@
-function App() {
-  const milestones = [
-    ["Project foundation", "Configuration, API shell, frontend shell and initial checks"],
-    ["Quality Playbook installation", "Pin the official upstream package and preserve notices"],
-    ["Repository ingestion", "Safe repository intake and workspace isolation"],
-    ["LLM provider abstraction", "Provider adapters, credentials and usage controls"],
-    ["Workflow orchestration", "LangGraph state, phase boundaries and checkpoints"],
-    ["Official quality phases", "Explore, Generate, Review, Audit, Reconcile and Verify"],
-    ["Iteration strategies", "Additional defect discovery and evidence reconciliation"],
-    ["Persistence and recovery", "Run history, artifacts and resumable execution"],
-    ["API and dashboard", "Connect the interface to real audit workflows"],
-    ["Final verification", "End-to-end, security and reproducibility checks"],
-  ];
-
-  return (
-    <main className="shell">
-      <header className="topbar">
-        <div className="brand-mark" aria-hidden="true">Q</div>
-        <div><p className="eyebrow">QUALITY ENGINEERING WORKSPACE</p><h1>QualityCheckAgent</h1></div>
-        <span className="status">Foundation stage</span>
-      </header>
-      <section className="welcome-card" aria-labelledby="welcome-title">
-        <p className="eyebrow">REPOSITORY QUALITY PLATFORM</p>
-        <h2 id="welcome-title">A more rigorous way to inspect codebases.</h2>
-        <p className="intro">The project foundation is in place. Repository connection, the official Quality Playbook workflow, provider configuration, and audit history will be introduced in subsequent milestones.</p>
-        <div className="progress-track" aria-label="Milestone 1 of 10"><span /></div>
-        <p className="progress-label">Milestone 1 of 10 · Project foundation</p>
-      </section>
-      <section className="phase-section" aria-labelledby="roadmap-title">
-        <div className="section-heading"><div><p className="eyebrow">DELIVERY PLAN</p><h2 id="roadmap-title">Development milestones</h2></div><span className="count">10 milestones</span></div>
-        <ol className="milestone-list">
-          {milestones.map(([title, description], index) => (
-            <li className={index === 0 ? "complete" : ""} key={title}>
-              <span className="step">{String(index + 1).padStart(2, "0")}</span>
-              <div><strong>{title}</strong><small>{description}</small></div>
-              {index === 0 && <span className="tag">In progress</span>}
-            </li>
-          ))}
-        </ol>
-      </section>
-      <footer>Built incrementally · Each milestone must pass its checks before the next begins.</footer>
-    </main>
-  );
+import { FormEvent, useState } from "react";
+type Finding={title:string;severity:string;file:string;line:number|null;description:string;recommendation:string};
+type Report={report_id:string;repository_name:string;repository_url:string;summary:string;findings:Finding[];strengths:string[];limitations:string[]};
+const API="http://127.0.0.1:8000";
+export default function App(){
+ const [url,setUrl]=useState(""); const [report,setReport]=useState<Report|null>(null); const [error,setError]=useState(""); const [loading,setLoading]=useState(false);
+ async function submit(e:FormEvent){e.preventDefault();setLoading(true);setError("");setReport(null);try{const r=await fetch(`${API}/api/analyze`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({repository_url:url})});const d=await r.json();if(!r.ok)throw new Error(d.detail||"Analysis failed");setReport(d);}catch(x){setError(x instanceof Error?x.message:"Backend unavailable");}finally{setLoading(false);}}
+ const counts=report?.findings.reduce<Record<string,number>>((a,f)=>(a[f.severity]=(a[f.severity]||0)+1,a),{})||{};
+ return <main className="shell"><header><div className="logo">Q</div><div><b>QualityCheckAgent</b><small>Repository quality analysis</small></div><span className="pill">LOCAL MVP</span></header>
+ <section className="hero"><label>AI-ASSISTED CODE QUALITY</label><h1>Find issues before<br/><em>they find you.</em></h1><p>Analyze a public GitHub repository and receive evidence-based findings prioritized by severity.</p>
+ <form onSubmit={submit}><input type="url" required value={url} onChange={e=>setUrl(e.target.value)} placeholder="https://github.com/owner/repository"/><button disabled={loading}>{loading?"Analyzing…":"Analyze repository"}</button></form><small className="hint">Public GitHub repositories · Selected text files · No code execution</small>{loading&&<div className="loading">Cloning repository and requesting analysis from Groq…</div>}{error&&<div className="error">{error}</div>}</section>
+ {report&&<section className="results"><div className="resultHead"><div><label>ANALYSIS COMPLETE</label><h2>{report.repository_name}</h2><a href={report.repository_url} target="_blank" rel="noreferrer">{report.repository_url}</a></div><a className="download" href={`${API}/api/reports/${report.report_id}/markdown`}>Download report ↓</a></div>
+ <div className="summary"><b>Summary</b><p>{report.summary}</p></div><div className="stats">{["critical","high","medium","low","info"].map(s=><div key={s}><strong>{counts[s]||0}</strong><small>{s}</small></div>)}</div>
+ <h3>Findings ({report.findings.length})</h3>{report.findings.length===0?<p className="muted">No concrete findings returned. This does not prove the repository is defect-free.</p>:report.findings.map((f,i)=><article key={i}><div className="findingTitle"><span className={`sev ${f.severity}`}>{f.severity}</span><b>{f.title}</b></div><code>{f.file}{f.line?`:${f.line}`:""}</code><p>{f.description}</p><div className="recommend"><b>Recommendation</b><p>{f.recommendation}</p></div></article>)}
+ <div className="columns"><div className="summary"><h3>Strengths</h3>{report.strengths.map((x,i)=><p key={i}>✓ {x}</p>)}</div><div className="summary"><h3>Limitations</h3>{report.limitations.map((x,i)=><p key={i}>• {x}</p>)}</div></div>
+ <p className="disclaimer">AI-assisted static review only. Repository code/tests were not executed and official QPB verification gates were not run by this MVP.</p></section>}<footer>QualityCheckAgent · Local development build</footer></main>;
 }
-
-export default App;

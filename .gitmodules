@@ -1,0 +1,3 @@
+[submodule "vendor/quality-playbook"]
+	path = vendor/quality-playbook
+	url = https://github.com/andrewstellman/quality-playbook.git

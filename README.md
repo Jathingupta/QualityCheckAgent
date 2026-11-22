@@ -1,67 +1,56 @@
-# QualityCheckAgent
+# QualityCheckAgent MVP
 
-A repository quality-engineering application built around the official Quality Playbook methodology.
+Local-first GitHub repository analyzer using FastAPI, React, Vite and Groq.
 
-> **Project status:** Foundation stage. The official Quality Playbook engine has not yet been added. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+## Features
+- Accepts public GitHub HTTPS repository URLs.
+- Shallow-clones repositories with a timeout.
+- Inspects a bounded set of text/source files; skips common dependency/build folders and secret-like files.
+- Uses Groq's OpenAI-compatible chat completions API for evidence-based static review.
+- Displays findings, severity, file references, recommendations and a Markdown report download.
+- Does not execute repository code or tests.
 
-## Planned capabilities
-- Ingest and inspect a Git repository.
-- Run the six official Quality Playbook phases: Explore, Generate, Review, Audit, Reconcile, and Verify.
-- Preserve phase artifacts, evidence, and verification results.
-- Support configurable LLM providers through a backend adapter layer.
-- Track runs, costs, and status in a local database.
-- Provide a web dashboard for starting and inspecting audits.
+## QPB integration status — read carefully
+The official Quality Playbook v1.6.1 remains a separately pinned Git submodule in the existing project at `vendor/quality-playbook`. This MVP is a Groq-powered static repository review; it does **not** claim to execute the full official QPB workflow, independent phase contexts, official scripts or verification gates. Full QPB execution needs an agent runtime adapter. The UI and repository-ingestion service are structured so that adapter can be added separately.
 
-The application will orchestrate the official methodology; it will not silently replace or simplify it.
+## Requirements
+Python 3.12+, Node.js 20+, Git on PATH, Groq API key.
 
-## Technology
-- Backend: Python 3.12+, FastAPI; SQLite persistence will be introduced in the persistence milestone.
-- Frontend: React, TypeScript, Vite.
-- Workflow orchestration: LangGraph (later milestone).
-- Quality engine: official Quality Playbook distribution, kept separately and version-pinned.
-
-## Roadmap
-1. Foundation, configuration, dependency and licence inventory.
-2. Official Quality Playbook discovery, pinning and installation.
-3. Repository ingestion and safe workspace handling.
-4. LLM provider abstraction and cost controls.
-5. LangGraph orchestration and run state.
-6. Integration of the six official phases without changing their methodology.
-7. Iteration strategies and additional defect detection.
-8. Persistence, checkpointing and recovery.
-9. API and dashboard integration.
-10. End-to-end, security and reproducibility verification.
-
-Each milestone must pass its checks before the next begins.
-
-## Quick start (Windows PowerShell)
-Requirements: Python 3.12+, Node.js 20+, npm, and Git.
-
-### Backend
+## Windows setup
+From project root:
 ```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 pip install -e ".[dev]"
+Copy-Item .env.example .env
+```
+Edit `.env` and set `GROQ_API_KEY`. Default model: `openai/gpt-oss-20b`.
+
+Terminal 1 (project root):
+```powershell
 uvicorn app.main:app --reload --app-dir backend
 ```
-Open http://127.0.0.1:8000/health and http://127.0.0.1:8000/docs.
-
-Run checks:
-```powershell
-pytest
-ruff check .
-```
-
-### Frontend
+Terminal 2:
 ```powershell
 cd frontend
 npm install
 npm run dev
 ```
+Open http://localhost:5173.
 
-## Secrets and confidential data
-Copy `.env.example` to `.env` when local configuration is needed. Never commit API keys, tokens, credentials, private repository contents, or company data. No LLM API key is required for this foundation milestone. Do not connect this prototype to company repositories until security review is complete.
+## API
+- `GET /health`
+- `GET /api/config`
+- `POST /api/analyze` body `{"repository_url":"https://github.com/owner/repo"}`
+- `GET /api/reports/{report_id}`
+- `GET /api/reports/{report_id}/markdown`
 
-## Licence and third-party components
-The application's own licensing position has not yet been selected. The official Quality Playbook is separately distributed under Apache License 2.0; preserve its licence, copyright notices, and applicable NOTICE file when it is added. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+## Safety and limitations
+Only public GitHub HTTPS URLs are accepted. Clone timeout and context/file limits are applied. Repository content is untrusted; prompt injection text in files must not be followed. No repository code is executed. Do not analyze private company repositories until company approval and security/data-handling review. Model output is not proof that a defect exists; verify findings manually.
+
+## Checks
+```powershell
+pytest -v
+ruff check .
+```
