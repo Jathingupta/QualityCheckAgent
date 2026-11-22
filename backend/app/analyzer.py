@@ -173,7 +173,7 @@ async def _analyze_batch(settings: Settings, repository_name: str, context: str)
         choice = response.json()["choices"][0]
         start = max(0, exc.pos - 180)
         end = min(len(content), exc.pos + 180)
-        excerpt = content[start:end].replace("\\n", " ")
+        excerpt = content[start:end].replace("\n", " ")
         raise RuntimeError(
             "Groq returned invalid JSON. "
             f"Finish reason: {choice.get('finish_reason', 'unknown')}; "
@@ -194,13 +194,13 @@ def _source_evidence_is_valid(finding: dict, context: str) -> bool:
     if not file_name or not isinstance(evidence, str) or not evidence.strip():
         return False
 
-    sections = re.split(r"(?m)^--- FILE: (.+?) ---\\n", context)
+    sections = re.split(r"(?m)^--- FILE: (.+?) ---\n", context)
     for index in range(1, len(sections), 2):
         if sections[index].strip() != file_name:
             continue
         source_lines = {}
         for source_line in sections[index + 1].splitlines():
-            match = re.match(r"^\\s*(\\d+) \\| (.*)$", source_line)
+            match = re.match(r"^\s*(\d+) \\| (.*)$", source_line)
             if match:
                 source_lines[int(match.group(1))] = match.group(2)
         normalized_evidence = " ".join(evidence.split())
