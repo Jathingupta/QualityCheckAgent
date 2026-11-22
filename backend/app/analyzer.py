@@ -200,7 +200,7 @@ def _source_evidence_is_valid(finding: dict, context: str) -> bool:
             continue
         source_lines = {}
         for source_line in sections[index + 1].splitlines():
-            match = re.match(r"^\s*(\d+) \\| (.*)$", source_line)
+            match = re.match(r"^\s*(\d+) \| (.*)$", source_line)
             if match:
                 source_lines[int(match.group(1))] = match.group(2)
         normalized_evidence = " ".join(evidence.split())
