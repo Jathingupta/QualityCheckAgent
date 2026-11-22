@@ -17,6 +17,7 @@ def sample_report() -> AnalysisReport:
                 severity="high",
                 file="src/example.py",
                 line=12,
+                evidence="dangerous_call(user_input)",
                 description="Evidence-backed description.",
                 recommendation="Apply a targeted fix.",
             )
@@ -27,20 +28,23 @@ def sample_report() -> AnalysisReport:
     )
 
 
-def test_markdown_report_contains_overview_and_scope():
+def test_markdown_report_contains_overview_evidence_and_scope():
     markdown = render_markdown(sample_report())
     assert "# Repository Quality Report: itsdangerous" in markdown
     assert "| High | 1 |" in markdown
-    assert "Evidence and impact" in markdown
+    assert "Source evidence" in markdown
+    assert "dangerous_call(user_input)" in markdown
+    assert "Assessment and impact" in markdown
     assert "Review Scope and Disclaimer" in markdown
 
 
-def test_docx_report_contains_findings_and_sections():
+def test_docx_report_contains_findings_evidence_and_sections():
     document_bytes = render_docx(sample_report())
     document = Document(BytesIO(document_bytes))
     text = "\n".join(paragraph.text for paragraph in document.paragraphs)
     assert "Repository Quality Report" in text
     assert "Example issue" in text
+    assert "dangerous_call(user_input)" in text
     assert "Recommended action" in text
     assert "Review Scope and Disclaimer" in text
     assert len(document.tables) == 2
