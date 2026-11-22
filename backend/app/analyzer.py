@@ -100,7 +100,9 @@ async def _analyze_batch(settings: Settings, repository_name: str, context: str)
     payload = {
         "model": settings.groq_model,
         "temperature": 0.1,
-        "max_tokens": MAX_COMPLETION_TOKENS,
+        "max_completion_tokens": MAX_COMPLETION_TOKENS,
+        "reasoning_effort": "low",
+        "include_reasoning": False,
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {
@@ -147,7 +149,14 @@ async def _analyze_batch(settings: Settings, repository_name: str, context: str)
     message = response.json()["choices"][0]["message"]
     content = message.get("content")
     if not content:
-        raise RuntimeError("Groq returned an empty analysis response.")
+        choice = response.json()["choices"][0]
+        usage = response.json().get("usage", {})
+        raise RuntimeError(
+            "Groq returned no visible analysis content. "
+            f"Finish reason: {choice.get('finish_reason', 'unknown')}; "
+            f"completion tokens: {usage.get('completion_tokens', 'unknown')}; "
+            "try a lower reasoning effort or a larger completion budget."
+        )
     try:
         data = json.loads(content)
     except json.JSONDecodeError as exc:
