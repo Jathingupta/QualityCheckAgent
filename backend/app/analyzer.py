@@ -57,6 +57,14 @@ Python-specific safeguards:
   do not claim that instance access returns a non-callable staticmethod object.
 - Account for @classmethod, property, decorators, descriptors, and normal method binding
   before reporting callable or attribute-access defects.
+- If a module has "from __future__ import annotations", annotations are deferred and names
+  used only in annotations are not evaluated when the function or class is defined.
+  An import guarded by "if TYPE_CHECKING:" can therefore be valid when its name is used
+  only in annotations. Do not report a runtime NameError for that pattern without proving
+  the name is also evaluated in a runtime expression.
+- Distinguish annotation-only references from runtime expressions, including return types,
+  parameter types, variable annotations, and type aliases. Check whether the referenced
+  name is actually loaded by executable code.
 - Do not report a missing assignment or method merely because it is not in the excerpt;
   inspect the complete relevant class/function when available.
 
