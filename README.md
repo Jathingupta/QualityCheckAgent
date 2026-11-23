@@ -26,7 +26,7 @@ The application now:
 
 ## Requirements
 
-Python 3.12+, Node.js 20+, Git on PATH, and a Groq API key for static review. After cloning the application, initialize its pinned QPB submodule with `git submodule update --init --recursive`.
+Python 3.12+, Node.js 20+, Git on PATH, and a Groq API key for static review.
 
 ## Windows setup
 

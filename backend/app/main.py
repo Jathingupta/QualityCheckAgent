@@ -10,7 +10,7 @@ from fastapi.responses import PlainTextResponse, Response
 
 from app.analyzer import analyze_with_groq, normalize_findings
 from app.config import get_settings
-from app.reports import (
+from app.qpb_skill import inspect_skill, install_skill, skill_fingerprint, status_dict\nfrom app.reports import (
     load_report,
     render_docx,
     render_markdown,
