@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from app import qpb_skill
 
 
@@ -38,7 +40,5 @@ def test_install_manifest_reports_missing_files(tmp_path):
 
 
 def test_phase_prompt_rejects_invalid_phase(tmp_path):
-    import pytest
-
     with pytest.raises(ValueError, match="between 1 and 6"):
         qpb_skill.phase_prompt(tmp_path, 7)
