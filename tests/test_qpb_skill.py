@@ -5,14 +5,20 @@ from app import qpb_skill
 
 
 def _make_installed_skill(root: Path) -> None:
-    for relative in qpb_skill.INSTALLED_REQUIRED_FILES:
+    required = list(qpb_skill.INSTALLED_REQUIRED_FILES)
+    for directory in ("references", "phase_prompts", "agents"):
+        source_dir = qpb_skill.skill_source() / directory
+        if source_dir.is_dir():
+            required.extend(
+                f"{directory}/{path.name}" for path in source_dir.glob("*.md")
+            )
+    for relative in required:
         path = root / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(
-            "metadata:\n  version: 1.6.1\n" if relative == "SKILL.md" else "test asset\n",
+            "metadata:\\n  version: 1.6.1\\n" if relative == "SKILL.md" else "test asset\\n",
             encoding="utf-8",
         )
-
 
 def test_version_reads_skill_frontmatter(tmp_path):
     (tmp_path / "SKILL.md").write_text(

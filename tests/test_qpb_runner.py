@@ -120,3 +120,23 @@ def test_copilot_availability_requires_standalone_or_legacy_extension(monkeypatc
         lambda *args, **kwargs: type("Result", (), {"returncode": 1})(),
     )
     assert qpb_runner._copilot_available() is False
+
+
+def test_phase_progress_parses_official_em_dash_checklist():
+    progress = (
+        "# QPB Run Progress\\n"
+        "## Phases\\n"
+        "- [x] Phase 1 — Explore (2m)\\n"
+        "- [x] Phase 2 — Generate\\n"
+        "- [x] Phase 3 — Code Review\\n"
+        "- [ ] Phase 4 — Spec Audit *(in progress)*\\n"
+        "- [ ] Phase 5 — Reconciliation\\n"
+        "- [ ] Phase 6 — Verify\\n"
+    )
+
+    phases = qpb_runner._phase_progress(progress, return_code=0)
+
+    assert [phase["status"] for phase in phases] == [
+        "completed", "completed", "completed", "pending", "pending", "pending"
+    ]
+    assert phases[0]["evidence"] == ["- [x] Phase 1 — Explore (2m)"]

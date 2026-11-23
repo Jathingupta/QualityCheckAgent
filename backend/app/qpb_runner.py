@@ -124,15 +124,21 @@ def build_runner_command(
 
 
 def _phase_progress(progress_text: str, return_code: int) -> list[dict[str, Any]]:
+    """Read the official QPB checklist, whose separator is an em dash."""
     results = []
     for number, name in enumerate(PHASES, start=1):
-        marker = f"- [x] Phase {number} - {name}"
-        complete = marker.casefold() in progress_text.casefold()
+        marker_pattern = re.compile(
+            rf"(?m)^\\s*-\\s*\\[x\\]\\s*Phase\\s+{number}\\s+[-—–]\\s*"
+            rf"{re.escape(name)}(?:\\s*(?:\\([^\\n]*\\))?)?\\s*$",
+            re.IGNORECASE,
+        )
+        matched = marker_pattern.search(progress_text)
+        evidence = matched.group(0).strip() if matched else None
         results.append({
             "number": number,
             "name": name,
-            "status": "completed" if complete else "pending",
-            "evidence": [marker] if complete else [],
+            "status": "completed" if matched else "pending",
+            "evidence": [evidence] if evidence else [],
         })
     if return_code != 0:
         first_pending = next((p for p in results if p["status"] == "pending"), None)

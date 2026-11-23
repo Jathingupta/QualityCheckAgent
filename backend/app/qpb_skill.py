@@ -23,7 +23,13 @@ INSTALLED_REQUIRED_FILES = (
     "bin/doc_classification.py", "bin/benchmark_lib.py",
     "bin/quality_playbook.py", "bin/council_semantic_check.py",
     "bin/role_map.py", "bin/persona_apply.py", "bin/qpb_phase.py",
-    "bin/run_state_lib.py", "bin/qpb_config.py",
+    "bin/run_state_lib.py", "bin/qpb_config.py", "bin/__init__.py",
+    "bin/persona_catalog.py", "bin/persona_orchestration.py",
+    "bin/persona_grounding.py", "bin/persona_merge.py",
+    "bin/requirements_render.py", "bin/archive_lib.py",
+    "bin/migrate_v1_5_0_layout.py", "bin/council_config.py",
+    "bin/phase_identity.py", "bin/qpb_heartbeat.py",
+    "bin/qpb_gate_witness.py", "bin/upstream_scripts.py",
     "references/phase1_exploration_guide.md",
     "references/phase2_generation_guide.md", "references/review_protocols.md",
     "references/spec_audit.md", "references/requirements_pipeline.md",
@@ -93,6 +99,15 @@ def inspect_skill(install_path: Path | None = None) -> SkillStatus:
 
     root = install_path
     missing = [name for name in INSTALLED_REQUIRED_FILES if not (root / name).is_file()]
+    # The official installer copies every Markdown file from these directories.
+    # Validate the full pinned bundle, not just a hand-picked subset.
+    for directory in ("references", "phase_prompts", "agents"):
+        source_directory = skill_source() / directory
+        if source_directory.is_dir():
+            for source_file in sorted(source_directory.glob("*.md")):
+                relative = f"{directory}/{source_file.name}"
+                if not (root / relative).is_file():
+                    missing.append(relative)
     version = _version(root)
     ok = not missing and version == QPB_VERSION
     return SkillStatus(
