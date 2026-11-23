@@ -136,11 +136,11 @@ def execute_qpb_run(
         "log_path": str(log_path),
     })
     save_run(workspace, run_id, state)
-    command = build_runner_command(target, runner, model, council_roster)
     timeout_seconds = 6 * 60 * 60
     return_code = -1
     failure = None
     try:
+        command = build_runner_command(target, runner, model, council_roster)
         with log_path.open("w", encoding="utf-8") as log:
             log.write("COMMAND: " + subprocess.list2cmdline(command) + "\n\n")
             log.flush()

@@ -127,11 +127,19 @@ def phase_prompt(target_repository: Path, phase: int) -> str:
 
 def skill_fingerprint(root: Path | None = None) -> str:
     root = root or skill_source()
+    if (root / "scripts").is_dir():
+        files = (
+            "SKILL.md", "scripts/quality_gate.py", "scripts/qpb_validate.py",
+            "scripts/install_skill.py", *PHASE_FILES, "phase_prompts/phase6_auditor.md",
+        )
+    else:
+        files = (
+            "SKILL.md", "quality_gate.py", "bin/qpb_validate.py",
+            "bin/validate_phase_artifacts.py", *PHASE_FILES,
+            "phase_prompts/phase6_auditor.md",
+        )
     digest = hashlib.sha256()
-    for relative in (
-        "SKILL.md", "scripts/quality_gate.py", "scripts/qpb_validate.py",
-        "scripts/install_skill.py", *PHASE_FILES, "phase_prompts/phase6_auditor.md",
-    ):
+    for relative in files:
         path = root / relative
         if path.is_file():
             digest.update(relative.encode())
