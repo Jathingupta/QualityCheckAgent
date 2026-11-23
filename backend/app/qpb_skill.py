@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+import shutil
 import subprocess
 import sys
 from dataclasses import asdict, dataclass
@@ -12,7 +13,7 @@ QPB_COMMIT = "ee60d579ecf43ee000039736e4bb1edbabe0201a"
 SKILL_RELATIVE = Path("plugins/quality-playbook/skills/quality-playbook")
 PHASE_FILES = tuple(f"phase_prompts/phase{number}.md" for number in range(1, 7))
 INSTALLED_REQUIRED_FILES = (
-    "SKILL.md", "quality_gate.py", "skill-template.gitignore",
+    "SKILL.md", "LICENSE.txt", "quality_gate.py", "skill-template.gitignore",
     "ai_context/TOOLKIT.md",
     "agents/quality-playbook.agent.md",
     "agents/quality-playbook-claude.agent.md",
@@ -80,6 +81,8 @@ def inspect_skill(install_path: Path | None = None) -> SkillStatus:
             "references/requirements_pipeline.md",
         )
         missing = [name for name in source_files if not (root / name).is_file()]
+        if not (qpb_checkout() / "LICENSE.txt").is_file():
+            missing.append("LICENSE.txt")
         version = _version(root)
         ok = not missing and version == QPB_VERSION
         return SkillStatus(
@@ -128,6 +131,10 @@ def install_skill(target_repository: Path) -> SkillStatus:
             f"Official QPB installer failed (exit {result.returncode}). "
             f"stdout: {result.stdout[-2500:]} stderr: {result.stderr[-2500:]}"
         )
+    license_source = qpb_checkout() / "LICENSE.txt"
+    if not license_source.is_file():
+        raise RuntimeError("Pinned QPB checkout is missing LICENSE.txt.")
+    shutil.copy2(license_source, destination / "LICENSE.txt")
     status = inspect_skill(destination)
     if not status.installed:
         raise RuntimeError(
