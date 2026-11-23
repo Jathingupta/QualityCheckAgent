@@ -19,6 +19,7 @@ from app.reports import (
 )
 from app.repository import clone_repository, read_repository_context
 from app.schemas import AnalysisReport, AnalyzeRequest
+from app.qpb_skill import inspect_skill, install_skill, skill_fingerprint, status_dict
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -130,7 +131,6 @@ def download_report_docx(report_id: str):
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Report not found.") from exc
 
-from app.qpb_skill import inspect_skill, install_skill, status_dict
 
 @app.get("/api/qpb/skill")
 def qpb_skill_status():
@@ -160,9 +160,9 @@ def qpb_prepare(request: AnalyzeRequest):
             "repository_name": repository_name,
             "repository_path": str(target),
             "skill": status_dict(installed),
-            "skill_fingerprint": __import__(
-                "app.qpb_skill", fromlist=["skill_fingerprint"]
-            ).skill_fingerprint(target / ".github" / "skills" / "quality-playbook"),
+            "skill_fingerprint": skill_fingerprint(
+                target / ".github" / "skills" / "quality-playbook"
+            ),
             "status": "prepared",
             "phases": [
                 {"number": n, "name": name, "status": "pending", "evidence": []}

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import hashlib
-import shutil
+import re
+import subprocess
+import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -9,18 +11,13 @@ QPB_VERSION = "1.6.1"
 QPB_COMMIT = "ee60d579ecf43ee000039736e4bb1edbabe0201a"
 SKILL_RELATIVE = Path("plugins/quality-playbook/skills/quality-playbook")
 PHASE_FILES = tuple(f"phase_prompts/phase{number}.md" for number in range(1, 7))
-REQUIRED_FILES = (
-    "SKILL.md",
-    "scripts/qpb_validate.py",
-    "scripts/quality_gate.py",
-    "scripts/validate_phase_artifacts.py",
+INSTALLED_REQUIRED_FILES = (
+    "SKILL.md", "quality_gate.py", "bin/qpb_validate.py",
+    "bin/validate_phase_artifacts.py", "bin/reference_docs_ingest.py",
     "references/phase1_exploration_guide.md",
-    "references/phase2_generation_guide.md",
-    "references/review_protocols.md",
-    "references/spec_audit.md",
-    "references/requirements_pipeline.md",
-    *PHASE_FILES,
-    "phase_prompts/phase6_auditor.md",
+    "references/phase2_generation_guide.md", "references/review_protocols.md",
+    "references/spec_audit.md", "references/requirements_pipeline.md",
+    *PHASE_FILES, "phase_prompts/phase6_auditor.md",
 )
 
 @dataclass
@@ -35,42 +32,63 @@ class SkillStatus:
 def project_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
-def skill_source() -> Path:
-    return project_root() / "vendor" / "quality-playbook" / SKILL_RELATIVE
+def qpb_checkout() -> Path:
+    return project_root() / "vendor" / "quality-playbook"
 
-def _manifest(root: Path) -> tuple[list[str], str | None]:
-    import re
-    missing = [name for name in REQUIRED_FILES if not (root / name).is_file()]
+def skill_source() -> Path:
+    return qpb_checkout() / SKILL_RELATIVE
+
+def _version(root: Path) -> str | None:
     skill_md = root / "SKILL.md"
-    version = None
-    if skill_md.is_file():
-        text = skill_md.read_text(encoding="utf-8")
-        match = re.search(r"(?m)^\s*version:\s*['\"]?([0-9]+\.[0-9]+\.[0-9]+)", text)
-        version = match.group(1) if match else None
-    return missing, version
+    if not skill_md.is_file():
+        return None
+    match = re.search(
+        r"(?m)^\s*version:\s*([0-9]+\.[0-9]+\.[0-9]+)",
+        skill_md.read_text(encoding="utf-8"),
+    )
+    return match.group(1) if match else None
 
 def inspect_skill(install_path: Path | None = None) -> SkillStatus:
-    source = skill_source()
-    target = install_path or source
-    if not target.is_dir():
-        return SkillStatus(False, None, str(source), str(target), list(REQUIRED_FILES),
-                           "Pinned Quality Playbook source is not available. Initialize the Git submodule.")
-    missing, version = _manifest(target)
+    if install_path is None:
+        root = skill_source()
+        source_files = (
+            "SKILL.md", "scripts/install_skill.py", "scripts/quality_gate.py",
+            "scripts/qpb_validate.py", *PHASE_FILES,
+            "phase_prompts/phase6_auditor.md",
+            "references/phase1_exploration_guide.md",
+            "references/phase2_generation_guide.md",
+            "references/review_protocols.md", "references/spec_audit.md",
+            "references/requirements_pipeline.md",
+        )
+        missing = [name for name in source_files if not (root / name).is_file()]
+        version = _version(root)
+        ok = not missing and version == QPB_VERSION
+        return SkillStatus(
+            ok, version, str(root), None, missing,
+            "Pinned upstream QPB skill source is available."
+            if ok else "Pinned QPB submodule is missing required skill assets.",
+        )
+
+    root = install_path
+    missing = [name for name in INSTALLED_REQUIRED_FILES if not (root / name).is_file()]
+    version = _version(root)
     ok = not missing and version == QPB_VERSION
-    message = ("Official QPB skill assets are present and version-checked."
-               if ok else "Skill installation is incomplete or has an unexpected version.")
-    return SkillStatus(ok, version, str(source), str(target), missing, message)
+    return SkillStatus(
+        ok, version, str(skill_source()), str(root), missing,
+        "Official QPB skill installation is complete and version-checked."
+        if ok else "Skill installation is incomplete or has an unexpected version.",
+    )
 
 def install_skill(target_repository: Path) -> SkillStatus:
-    source = skill_source()
-    source_status = inspect_skill(source)
+    source_status = inspect_skill()
     if not source_status.installed:
         raise RuntimeError(
-            "Pinned Quality Playbook skill source is incomplete: "
-            + ", ".join(source_status.missing_files[:8])
+            "Pinned Quality Playbook source is incomplete: "
+            + ", ".join(source_status.missing_files[:10])
+            + ". Run 'git submodule update --init --recursive' in the application checkout."
         )
+    installer = skill_source() / "scripts" / "install_skill.py"
     destination = target_repository / ".github" / "skills" / "quality-playbook"
-    destination.parent.mkdir(parents=True, exist_ok=True)
     if destination.exists():
         current = inspect_skill(destination)
         if current.installed:
@@ -78,26 +96,42 @@ def install_skill(target_repository: Path) -> SkillStatus:
         raise RuntimeError(
             f"Refusing to overwrite an existing incomplete skill installation at {destination}"
         )
-    shutil.copytree(source, destination)
+    command = [
+        sys.executable, str(installer), "--into", str(target_repository),
+        "--ai-tool", "copilot", "--source", str(qpb_checkout()), "--verbose",
+    ]
+    result = subprocess.run(
+        command, cwd=target_repository, capture_output=True, text=True,
+        timeout=120, check=False,
+    )
+    if result.returncode:
+        raise RuntimeError(
+            f"Official QPB installer failed (exit {result.returncode}). "
+            f"stdout: {result.stdout[-2500:]} stderr: {result.stderr[-2500:]}"
+        )
     status = inspect_skill(destination)
     if not status.installed:
-        shutil.rmtree(destination, ignore_errors=True)
-        raise RuntimeError("Installed skill failed post-install validation.")
+        raise RuntimeError(
+            "Official installer returned success but the installed bundle failed "
+            "post-install validation: " + ", ".join(status.missing_files[:10])
+        )
     return status
 
 def phase_prompt(target_repository: Path, phase: int) -> str:
     if phase not in range(1, 7):
         raise ValueError("Phase must be between 1 and 6.")
     installed = target_repository / ".github" / "skills" / "quality-playbook"
-    status = inspect_skill(installed)
-    if not status.installed:
+    if not inspect_skill(installed).installed:
         raise RuntimeError("Quality Playbook skill is not installed correctly.")
     return (installed / f"phase_prompts/phase{phase}.md").read_text(encoding="utf-8")
 
 def skill_fingerprint(root: Path | None = None) -> str:
     root = root or skill_source()
     digest = hashlib.sha256()
-    for relative in REQUIRED_FILES:
+    for relative in (
+        "SKILL.md", "scripts/quality_gate.py", "scripts/qpb_validate.py",
+        "scripts/install_skill.py", *PHASE_FILES, "phase_prompts/phase6_auditor.md",
+    ):
         path = root / relative
         if path.is_file():
             digest.update(relative.encode())
