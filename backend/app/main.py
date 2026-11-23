@@ -204,11 +204,12 @@ def qpb_prepare(request: AnalyzeRequest):
 
 @app.get("/api/qpb/runs/{run_id}")
 def get_qpb_run(run_id: str):
-    run_file = Path(settings.workspace_dir).resolve() / "qpb_runs" / run_id / "run.json"
     try:
-        return json.loads(run_file.read_text(encoding="utf-8"))
+        return load_run(Path(settings.workspace_dir).resolve(), run_id)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail="QPB run not found.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/api/qpb/runtime")
