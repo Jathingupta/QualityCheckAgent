@@ -1,5 +1,8 @@
+import io
 import json
 import logging
+import re
+import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -232,6 +235,8 @@ def start_qpb_run(
         state = load_run(workspace, run_id)
         if state.get("status") == "running":
             raise HTTPException(status_code=409, detail="This QPB run is already running.")
+        if state.get("status") == "completed":
+            raise HTTPException(status_code=409, detail="This QPB run has already passed its gate.")
         target = Path(state["repository_path"]).resolve()
         skill_status = inspect_skill(target / ".github" / "skills" / "quality-playbook")
         if not skill_status.installed:
@@ -248,13 +253,26 @@ def start_qpb_run(
                     "Install it and authenticate in the same OS account that runs the backend."
                 ),
             )
-        build_runner_command(target, request.runner, request.model, request.council_roster)
+        phase_states = state.get("phases", [])
+        pending_numbers = [
+            int(phase["number"])
+            for phase in phase_states
+            if phase.get("status") != "completed"
+        ]
+        first_phase = min(pending_numbers) if pending_numbers else 6
+        phases_to_run = list(range(first_phase, 7))
+        build_runner_command(
+            target, request.runner, request.model, request.council_roster, phases_to_run
+        )
         state.update({
             "status": "running",
             "runner": request.runner,
             "model": request.model,
             "council_roster": request.council_roster,
-            "message": "Official QPB Mode B execution has been queued.",
+            "requested_phases": phases_to_run,
+            "message": (
+                f"Official QPB Mode B execution queued from Phase {first_phase}."
+            ),
         })
         save_run(workspace, run_id, state)
         background_tasks.add_task(
@@ -264,6 +282,7 @@ def start_qpb_run(
             request.runner,
             request.model,
             request.council_roster,
+            phases_to_run,
         )
         return state
     except FileNotFoundError as exc:
@@ -275,3 +294,45 @@ def start_qpb_run(
     except Exception as exc:
         logger.exception("Could not start QPB run %s", run_id)
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.get("/api/qpb/runs/{run_id}/download")
+def download_qpb_artifacts(run_id: str):
+    workspace = Path(settings.workspace_dir).resolve()
+    try:
+        state = load_run(workspace, run_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="QPB run not found.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    target = Path(state["repository_path"]).resolve()
+    expected_root = (workspace / "repositories").resolve()
+    if expected_root not in target.parents:
+        raise HTTPException(status_code=400, detail="QPB target is outside the workspace.")
+
+    quality_dir = target / "quality"
+    files = [
+        path for path in quality_dir.rglob("*")
+        if path.is_file() and not path.is_symlink()
+    ] if quality_dir.is_dir() else []
+    agents_file = target / "AGENTS.md"
+    if agents_file.is_file():
+        files.append(agents_file)
+    if not files:
+        raise HTTPException(status_code=404, detail="No QPB artifacts have been generated yet.")
+
+    archive_buffer = io.BytesIO()
+    with zipfile.ZipFile(archive_buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for path in files:
+            archive.write(path, arcname=path.relative_to(target).as_posix())
+    archive_buffer.seek(0)
+    repository_name = re.sub(
+        r"[^A-Za-z0-9._-]+", "-", state.get("repository_name", "repository")
+    ).strip("-") or "repository"
+    filename = f"{repository_name}-quality-playbook-{run_id[:8]}.zip"
+    return Response(
+        content=archive_buffer.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

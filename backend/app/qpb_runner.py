@@ -67,6 +67,7 @@ def build_runner_command(
     runner: str,
     model: str | None = None,
     council_roster: str | None = None,
+    phases: list[int] | None = None,
 ) -> list[str]:
     if runner not in RUNNER_FLAGS:
         raise ValueError(f"Unsupported QPB runner: {runner}")
@@ -76,13 +77,22 @@ def build_runner_command(
             "Official QPB Mode-B runner is missing from the pinned submodule. "
             "Run 'git submodule update --init --recursive'."
         )
+    selected_phases = phases or [1, 2, 3, 4, 5, 6]
+    if (
+        not selected_phases
+        or any(phase not in range(1, 7) for phase in selected_phases)
+        or len(set(selected_phases)) != len(selected_phases)
+        or selected_phases != sorted(selected_phases)
+    ):
+        raise ValueError("QPB phases must be unique, ordered values between 1 and 6.")
+    phase_spec = ",".join(str(phase) for phase in selected_phases)
     command = [
         sys.executable,
         str(runner_script),
         str(target),
         RUNNER_FLAGS[runner],
         "--phase",
-        "1,2,3,4,5,6",
+        phase_spec,
         "--sequential",
     ]
     if model:
@@ -119,6 +129,7 @@ def execute_qpb_run(
     runner: str,
     model: str | None = None,
     council_roster: str | None = None,
+    phases: list[int] | None = None,
 ) -> None:
     state = load_run(workspace, run_id)
     target = Path(state["repository_path"]).resolve()
@@ -140,7 +151,12 @@ def execute_qpb_run(
     return_code = -1
     failure = None
     try:
-        command = build_runner_command(target, runner, model, council_roster)
+        selected_phases = phases or [1, 2, 3, 4, 5, 6]
+        state["requested_phases"] = selected_phases
+        save_run(workspace, run_id, state)
+        command = build_runner_command(
+            target, runner, model, council_roster, selected_phases
+        )
         with log_path.open("w", encoding="utf-8") as log:
             log.write("COMMAND: " + subprocess.list2cmdline(command) + "\n\n")
             log.flush()

@@ -53,3 +53,27 @@ def test_phase_progress_requires_exact_completed_checkpoints():
 def test_run_file_rejects_path_traversal(tmp_path):
     with pytest.raises(ValueError, match="Invalid QPB run ID"):
         qpb_runner._run_file(tmp_path, "../outside")
+
+def test_build_runner_command_can_resume_from_phase_three(monkeypatch, tmp_path):
+    runner = tmp_path / "bin" / "run_playbook.py"
+    runner.parent.mkdir(parents=True)
+    runner.write_text("", encoding="utf-8")
+    monkeypatch.setattr(qpb_runner, "qpb_checkout", lambda: tmp_path)
+
+    command = qpb_runner.build_runner_command(
+        tmp_path / "target", "copilot", phases=[3, 4, 5, 6]
+    )
+
+    assert command[command.index("--phase") + 1] == "3,4,5,6"
+
+
+def test_build_runner_command_rejects_out_of_order_phases(monkeypatch, tmp_path):
+    runner = tmp_path / "bin" / "run_playbook.py"
+    runner.parent.mkdir(parents=True)
+    runner.write_text("", encoding="utf-8")
+    monkeypatch.setattr(qpb_runner, "qpb_checkout", lambda: tmp_path)
+
+    with pytest.raises(ValueError, match="unique, ordered"):
+        qpb_runner.build_runner_command(
+            tmp_path / "target", "copilot", phases=[4, 3, 5, 6]
+        )
