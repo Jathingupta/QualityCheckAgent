@@ -19,7 +19,6 @@ from app.qpb_skill import inspect_skill, install_skill, skill_fingerprint, statu
 )
 from app.repository import clone_repository, read_repository_context
 from app.schemas import AnalysisReport, AnalyzeRequest
-from app.qpb_skill import inspect_skill, install_skill, skill_fingerprint, status_dict
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
