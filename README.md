@@ -73,6 +73,9 @@ Open http://localhost:5173.
 - `GET /api/qpb/runtime` — detect the official runner and supported agent CLIs
 - `POST /api/qpb/runs/{run_id}/start` body `{"runner":"copilot"}` — start all six phases through the official runner
 - `GET /api/qpb/runs/{run_id}` — retrieve the persistent preparation/phase record, checkpoints and gate verdict
+- `GET /api/qpb/runs/{run_id}/download` — download generated `quality/` artifacts and `AGENTS.md` as a ZIP
+
+If a run fails, starting it again resumes from the first incomplete phase (or re-runs Phase 6 if all phase checkboxes exist but the final gate failed). Create a new prepared run to start from Phase 1 again.
 
 ## Safety and limitations
 
