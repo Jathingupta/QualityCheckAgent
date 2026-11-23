@@ -53,9 +53,27 @@ def save_run(workspace: Path, run_id: str, state: dict[str, Any]) -> None:
     temporary.replace(path)
 
 
+def _copilot_available() -> bool:
+    if shutil.which("copilot") is not None:
+        return True
+    if shutil.which("gh") is None:
+        return False
+    try:
+        result = subprocess.run(
+            ["gh", "copilot", "--help"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return result.returncode == 0
+
+
 def runner_availability() -> dict[str, bool]:
     return {
-        "copilot": shutil.which("copilot") is not None or shutil.which("gh") is not None,
+        "copilot": _copilot_available(),
         "claude": shutil.which("claude") is not None,
         "codex": shutil.which("codex") is not None,
         "cursor": shutil.which("cursor") is not None,

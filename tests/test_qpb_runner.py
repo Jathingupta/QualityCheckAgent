@@ -99,3 +99,24 @@ def test_pinned_qpb_runner_cli_supports_application_flags():
     assert result.returncode == 0, result.stderr
     for flag in ("--copilot", "--phase", "--sequential", "--model", "--council-roster"):
         assert flag in result.stdout
+
+
+def test_copilot_availability_requires_standalone_or_legacy_extension(monkeypatch):
+    monkeypatch.setattr(
+        qpb_runner.shutil,
+        "which",
+        lambda name: "/usr/bin/copilot" if name == "copilot" else None,
+    )
+    assert qpb_runner._copilot_available() is True
+
+    monkeypatch.setattr(
+        qpb_runner.shutil,
+        "which",
+        lambda name: "/usr/bin/gh" if name == "gh" else None,
+    )
+    monkeypatch.setattr(
+        qpb_runner.subprocess,
+        "run",
+        lambda *args, **kwargs: type("Result", (), {"returncode": 1})(),
+    )
+    assert qpb_runner._copilot_available() is False
