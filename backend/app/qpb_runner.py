@@ -134,8 +134,8 @@ def _phase_progress(progress_text: str, return_code: int) -> list[dict[str, Any]
     results = []
     for number, name in enumerate(PHASES, start=1):
         marker_pattern = re.compile(
-            rf"(?m)^\\s*-\\s*\\[x\\]\\s*Phase\\s+{number}\\s+[-—–]\\s*"
-            rf"{re.escape(name)}(?:\\s*(?:\\([^\\n]*\\))?)?\\s*$",
+            rf"(?m)^\s*-\s*\[x\]\s*Phase\s+{number}\s+[-—–]\s*"
+            rf"{re.escape(name)}(?:\s*(?:\([^\n]*\))?)?\s*$",
             re.IGNORECASE,
         )
         matched = marker_pattern.search(progress_text)
@@ -151,7 +151,6 @@ def _phase_progress(progress_text: str, return_code: int) -> list[dict[str, Any]
         if first_pending:
             first_pending["status"] = "failed"
     return results
-
 
 def execute_qpb_run(
     workspace: Path,

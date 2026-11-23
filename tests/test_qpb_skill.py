@@ -16,7 +16,7 @@ def _make_installed_skill(root: Path) -> None:
         path = root / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(
-            "metadata:\\n  version: 1.6.1\\n" if relative == "SKILL.md" else "test asset\\n",
+            "metadata:\n  version: 1.6.1\n" if relative == "SKILL.md" else "test asset\n",
             encoding="utf-8",
         )
 

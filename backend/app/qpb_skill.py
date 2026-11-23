@@ -78,8 +78,14 @@ def inspect_skill(install_path: Path | None = None) -> SkillStatus:
             "scripts/reference_docs_ingest.py", "scripts/doc_classification.py",
             "scripts/quality_playbook.py", "scripts/council_semantic_check.py",
             "scripts/role_map.py", "scripts/persona_apply.py",
+            "scripts/persona_catalog.py", "scripts/persona_orchestration.py",
+            "scripts/persona_grounding.py", "scripts/persona_merge.py",
+            "scripts/requirements_render.py", "scripts/archive_lib.py",
+            "scripts/migrate_v1_5_0_layout.py", "scripts/council_config.py",
             "scripts/qpb_phase.py", "scripts/run_state_lib.py",
-            "scripts/qpb_config.py", *PHASE_FILES,
+            "scripts/qpb_config.py", "scripts/phase_identity.py",
+            "scripts/qpb_heartbeat.py", "scripts/qpb_gate_witness.py",
+            "scripts/upstream_scripts.py", "scripts/__init__.py", *PHASE_FILES,
             "phase_prompts/phase6_auditor.md",
             "references/phase1_exploration_guide.md",
             "references/phase2_generation_guide.md",
@@ -167,26 +173,32 @@ def phase_prompt(target_repository: Path, phase: int) -> str:
     return (installed / f"phase_prompts/phase{phase}.md").read_text(encoding="utf-8")
 
 def skill_fingerprint(root: Path | None = None) -> str:
-    """Hash the complete installed/source skill bundle deterministically."""
     root = root or skill_source()
+    if (root / "scripts").is_dir():
+        files = (
+            "SKILL.md", "scripts/quality_gate.py", "scripts/qpb_validate.py",
+            "scripts/install_skill.py", *PHASE_FILES, "phase_prompts/phase6_auditor.md",
+        )
+    else:
+        files = (
+            "SKILL.md", "quality_gate.py", "bin/qpb_validate.py",
+            "bin/validate_phase_artifacts.py", *PHASE_FILES,
+            "phase_prompts/phase6_auditor.md",
+        )
     digest = hashlib.sha256()
-    for path in sorted(root.rglob("*")):
-        if not path.is_file() or path.is_symlink():
-            continue
-        relative = path.relative_to(root)
-        if any(part in {".git", "__pycache__", ".pytest_cache"} for part in relative.parts):
-            continue
-        if path.suffix == ".pyc":
-            continue
-        digest.update(relative.as_posix().encode("utf-8"))
-        digest.update(b"\\0")
-        digest.update(path.read_bytes())
-        digest.update(b"\\0")
-    if root == skill_source():
-        license_path = qpb_checkout() / "LICENSE.txt"
-        if license_path.is_file():
-            digest.update(b"LICENSE.txt\\0")
-            digest.update(license_path.read_bytes())
+    for relative in files:
+        path = root / relative
+        if path.is_file():
+            digest.update(relative.encode())
+            digest.update(path.read_bytes())
+    license_path = (
+        qpb_checkout() / "LICENSE.txt"
+        if (root / "scripts").is_dir()
+        else root / "LICENSE.txt"
+    )
+    if license_path.is_file():
+        digest.update(b"LICENSE.txt")
+        digest.update(license_path.read_bytes())
     return digest.hexdigest()
 
 def status_dict(status: SkillStatus) -> dict:
