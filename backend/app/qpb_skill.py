@@ -12,8 +12,17 @@ QPB_COMMIT = "ee60d579ecf43ee000039736e4bb1edbabe0201a"
 SKILL_RELATIVE = Path("plugins/quality-playbook/skills/quality-playbook")
 PHASE_FILES = tuple(f"phase_prompts/phase{number}.md" for number in range(1, 7))
 INSTALLED_REQUIRED_FILES = (
-    "SKILL.md", "quality_gate.py", "bin/qpb_validate.py",
+    "SKILL.md", "quality_gate.py", "skill-template.gitignore",
+    "ai_context/TOOLKIT.md",
+    "agents/quality-playbook.agent.md",
+    "agents/quality-playbook-claude.agent.md",
+    "agents/calibration_orchestrator.md",
+    "bin/_purpose.py", "bin/citation_verifier.py", "bin/qpb_validate.py",
     "bin/validate_phase_artifacts.py", "bin/reference_docs_ingest.py",
+    "bin/doc_classification.py", "bin/benchmark_lib.py",
+    "bin/quality_playbook.py", "bin/council_semantic_check.py",
+    "bin/role_map.py", "bin/persona_apply.py", "bin/qpb_phase.py",
+    "bin/run_state_lib.py", "bin/qpb_config.py",
     "references/phase1_exploration_guide.md",
     "references/phase2_generation_guide.md", "references/review_protocols.md",
     "references/spec_audit.md", "references/requirements_pipeline.md",
@@ -52,8 +61,18 @@ def inspect_skill(install_path: Path | None = None) -> SkillStatus:
     if install_path is None:
         root = skill_source()
         source_files = (
-            "SKILL.md", "scripts/install_skill.py", "scripts/quality_gate.py",
-            "scripts/qpb_validate.py", *PHASE_FILES,
+            "SKILL.md", "skill-template.gitignore", "ai_context/TOOLKIT.md",
+            "agents/quality-playbook.agent.md",
+            "agents/quality-playbook-claude.agent.md",
+            "agents/calibration_orchestrator.md",
+            "scripts/install_skill.py", "scripts/quality_gate.py",
+            "scripts/qpb_validate.py", "scripts/citation_verifier.py",
+            "scripts/_purpose.py", "scripts/benchmark_lib.py",
+            "scripts/reference_docs_ingest.py", "scripts/doc_classification.py",
+            "scripts/quality_playbook.py", "scripts/council_semantic_check.py",
+            "scripts/role_map.py", "scripts/persona_apply.py",
+            "scripts/qpb_phase.py", "scripts/run_state_lib.py",
+            "scripts/qpb_config.py", *PHASE_FILES,
             "phase_prompts/phase6_auditor.md",
             "references/phase1_exploration_guide.md",
             "references/phase2_generation_guide.md",
