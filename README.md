@@ -72,6 +72,7 @@ Open http://localhost:5173.
 - `POST /api/qpb/prepare` — clone a target and install the QPB skill
 - `GET /api/qpb/runtime` — detect the official runner and supported agent CLIs
 - `POST /api/qpb/runs/{run_id}/start` body `{"runner":"copilot"}` — start all six phases through the official runner
+- `GET /api/qpb/runs` — list saved QPB runs (the frontend restores the latest run after reload)
 - `GET /api/qpb/runs/{run_id}` — retrieve the persistent preparation/phase record, checkpoints and gate verdict
 - `GET /api/qpb/runs/{run_id}/download` — download generated `quality/` artifacts and `AGENTS.md` as a ZIP
 
