@@ -11,9 +11,11 @@ The application now:
 - Installs the official skill into a target repository at `.github/skills/quality-playbook`.
 - Verifies the installation after copying.
 - Creates a persistent run record with all six QPB phases represented separately.
-- Exposes skill status, preparation, and run-state APIs.
+- Starts the upstream QPB Mode B runner (`bin/run_playbook.py`) through a configured agent CLI: Copilot, Claude, Codex, or Cursor.
+- Delegates each phase to the upstream runner's separate phase subprocesses, and lets QPB handle its Phase 4 Council and isolated Phase 6 verifier.
+- Tracks phase checkpoints, runner output, and the official gate result in the run record.
 
-**Current milestone:** skill installation and run preparation. The UI intentionally displays all six phases as pending. It does not claim that the phases have executed. The next milestone is wiring the phase execution runtime, independent auditor dispatch, safe tool execution, official gates, and resumable phase checkpoints. In particular, Phase 4's Council of Three and Phase 6's fresh-context auditor must not be simulated by one model response.
+**Execution requirements:** one supported QPB agent CLI must be installed and authenticated in the same OS account/environment that runs the FastAPI backend. The default is GitHub Copilot CLI. The app does not substitute Groq chat completions for the QPB runner. Groq remains available for the separate static-review feature. Phase completion is determined from `quality/PROGRESS.md` and the official gate log, not from a model's self-report.
 
 ## Existing static review
 
@@ -68,7 +70,9 @@ Open http://localhost:5173.
 - `GET /api/reports/{report_id}/docx`
 - `GET /api/qpb/skill` — inspect the pinned QPB skill bundle
 - `POST /api/qpb/prepare` — clone a target and install the QPB skill
-- `GET /api/qpb/runs/{run_id}` — retrieve the persistent preparation/phase record
+- `GET /api/qpb/runtime` — detect the official runner and supported agent CLIs
+- `POST /api/qpb/runs/{run_id}/start` body `{"runner":"copilot"}` — start all six phases through the official runner
+- `GET /api/qpb/runs/{run_id}` — retrieve the persistent preparation/phase record, checkpoints and gate verdict
 
 ## Safety and limitations
 
