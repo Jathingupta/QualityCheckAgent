@@ -21,7 +21,8 @@ def test_build_runner_command_uses_official_six_phase_mode_b(monkeypatch, tmp_pa
 
     assert str(runner) in command
     assert "--copilot" in command
-    assert command[command.index("--phase") + 1] == "1,2,3,4,5,6"
+    assert command[command.index("--phase-groups") + 1] == "1,2,3,4,5,6"
+    assert command[command.index("--iterations") + 1] == "gap,unfiltered,parity,adversarial"
     assert "--sequential" in command
     assert command[command.index("--model") + 1] == "gpt-5.5"
     assert command[command.index("--council-roster") + 1].count(",") == 2
@@ -67,7 +68,7 @@ def test_build_runner_command_can_resume_from_phase_three(monkeypatch, tmp_path)
         tmp_path / "target", "copilot", phases=[3, 4, 5, 6]
     )
 
-    assert command[command.index("--phase") + 1] == "3,4,5,6"
+    assert command[command.index("--phase-groups") + 1] == "3,4,5,6"
 
 
 def test_build_runner_command_rejects_out_of_order_phases(monkeypatch, tmp_path):
@@ -140,3 +141,17 @@ def test_phase_progress_parses_official_em_dash_checklist():
         "completed", "completed", "completed", "pending", "pending", "pending"
     ]
     assert phases[0]["evidence"] == ["- [x] Phase 1 — Explore (2m)"]
+
+
+def test_build_runner_command_can_skip_iteration_strategies(monkeypatch, tmp_path):
+    runner = tmp_path / "bin" / "run_playbook.py"
+    runner.parent.mkdir(parents=True)
+    runner.write_text("", encoding="utf-8")
+    monkeypatch.setattr(qpb_runner, "qpb_checkout", lambda: tmp_path)
+
+    command = qpb_runner.build_runner_command(
+        tmp_path / "target", "copilot", include_iterations=False
+    )
+
+    assert "--phase-groups" in command
+    assert "--iterations" not in command

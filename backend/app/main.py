@@ -271,13 +271,15 @@ def start_qpb_run(
         first_phase = min(pending_numbers) if pending_numbers else 6
         phases_to_run = list(range(first_phase, 7))
         build_runner_command(
-            target, request.runner, request.model, request.council_roster, phases_to_run
+            target, request.runner, request.model, request.council_roster,
+            phases_to_run, include_iterations=request.include_iterations,
         )
         state.update({
             "status": "running",
             "runner": request.runner,
             "model": request.model,
             "council_roster": request.council_roster,
+            "include_iterations": request.include_iterations,
             "requested_phases": phases_to_run,
             "message": (
                 f"Official QPB Mode B execution queued from Phase {first_phase}."
@@ -292,6 +294,7 @@ def start_qpb_run(
             request.model,
             request.council_roster,
             phases_to_run,
+            request.include_iterations,
         )
         return state
     except FileNotFoundError as exc:

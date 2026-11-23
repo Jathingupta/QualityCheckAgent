@@ -86,6 +86,7 @@ def build_runner_command(
     model: str | None = None,
     council_roster: str | None = None,
     phases: list[int] | None = None,
+    include_iterations: bool = True,
 ) -> list[str]:
     if runner not in RUNNER_FLAGS:
         raise ValueError(f"Unsupported QPB runner: {runner}")
@@ -109,10 +110,15 @@ def build_runner_command(
         str(runner_script),
         str(target),
         RUNNER_FLAGS[runner],
-        "--phase",
+        "--phase-groups",
         phase_spec,
         "--sequential",
     ]
+    if include_iterations:
+        command.extend([
+            "--iterations",
+            "gap,unfiltered,parity,adversarial",
+        ])
     if model:
         command.extend(["--model", model])
     if council_roster:
@@ -154,6 +160,7 @@ def execute_qpb_run(
     model: str | None = None,
     council_roster: str | None = None,
     phases: list[int] | None = None,
+    include_iterations: bool = True,
 ) -> None:
     state = load_run(workspace, run_id)
     target = Path(state["repository_path"]).resolve()
@@ -167,6 +174,7 @@ def execute_qpb_run(
         "runner": runner,
         "model": model,
         "council_roster": council_roster,
+        "include_iterations": include_iterations,
         "started_at": datetime.now(timezone.utc).isoformat(),
         "log_path": str(log_path),
     })
@@ -179,7 +187,8 @@ def execute_qpb_run(
         state["requested_phases"] = selected_phases
         save_run(workspace, run_id, state)
         command = build_runner_command(
-            target, runner, model, council_roster, selected_phases
+            target, runner, model, council_roster, selected_phases,
+            include_iterations=include_iterations,
         )
         with log_path.open("w", encoding="utf-8") as log:
             log.write("COMMAND: " + subprocess.list2cmdline(command) + "\n\n")

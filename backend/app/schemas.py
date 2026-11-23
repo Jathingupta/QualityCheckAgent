@@ -12,6 +12,7 @@ class QpbStartRequest(BaseModel):
     model: str | None = Field(default=None, max_length=120)
     council_roster: str | None = Field(default=None, max_length=500)
     acknowledge_execution_risk: bool = False
+    include_iterations: bool = True
 
 
 class Finding(BaseModel):
