@@ -163,6 +163,14 @@ def skill_fingerprint(root: Path | None = None) -> str:
         if path.is_file():
             digest.update(relative.encode())
             digest.update(path.read_bytes())
+    license_path = (
+        qpb_checkout() / "LICENSE.txt"
+        if (root / "scripts").is_dir()
+        else root / "LICENSE.txt"
+    )
+    if license_path.is_file():
+        digest.update(b"LICENSE.txt")
+        digest.update(license_path.read_bytes())
     return digest.hexdigest()
 
 def status_dict(status: SkillStatus) -> dict:

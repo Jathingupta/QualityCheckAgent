@@ -2,15 +2,18 @@
 
 This file tracks third-party software incorporated into or distributed with QualityCheckAgent.
 
-## Current status
-No third-party Quality Playbook files have been copied into this repository yet. Backend and frontend dependencies are declared in their manifests; exact resolved versions and licence metadata must be recorded after dependency installation and lockfile generation.
+## Quality Playbook
 
-## Planned: Quality Playbook
 - Project: Quality Playbook
 - Upstream: https://github.com/andrewstellman/quality-playbook
-- Licence: Apache License 2.0 (verify against the exact pinned release/commit before importing)
-- Integration status: Not yet vendored or installed
-- Required handling: Preserve upstream LICENSE, copyright notices, and applicable NOTICE file; mark modified upstream files.
+- Pinned version: 1.6.1
+- Pinned commit: `ee60d579ecf43ee000039736e4bb1edbabe0201a`
+- Licence: Apache License 2.0 (`vendor/quality-playbook/LICENSE.txt`)
+- Integration: referenced as a Git submodule at `vendor/quality-playbook`; the official upstream `scripts/install_skill.py` installs the skill into analyzed repositories at `.github/skills/quality-playbook`.
+- Attribution: upstream copyright and attribution in the skill, agent and reference files are retained. The application copies the upstream `LICENSE.txt` into each installed skill directory.
+- Modifications: upstream skill source is not edited in the submodule. QualityCheckAgent adds an adapter around the official installer and Mode B runner.
+
+The pinned upstream release is licensed under Apache-2.0. The submodule is a source dependency; hosted model/agent CLI services and their subscriptions are separate from the software licence.
 
 ## Dependency audit policy
 1. Record package name, version, source, and licence.

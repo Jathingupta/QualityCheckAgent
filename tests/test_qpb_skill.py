@@ -56,3 +56,4 @@ def test_official_installer_deploys_skill_to_copilot_layout(tmp_path):
     assert (destination / "SKILL.md").is_file()
     assert (destination / "quality_gate.py").is_file()
     assert (destination / "bin" / "qpb_validate.py").is_file()
+    assert (destination / "LICENSE.txt").is_file()
