@@ -238,6 +238,14 @@ def start_qpb_run(
             raise HTTPException(status_code=409, detail="This QPB run is already running.")
         if state.get("status") == "completed":
             raise HTTPException(status_code=409, detail="This QPB run has already passed its gate.")
+        if not request.acknowledge_execution_risk:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Acknowledge that the selected agent CLI can execute repository "
+                    "commands and tests before starting QPB."
+                ),
+            )
         target = Path(state["repository_path"]).resolve()
         skill_status = inspect_skill(target / ".github" / "skills" / "quality-playbook")
         if not skill_status.installed:

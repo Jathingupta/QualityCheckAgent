@@ -11,6 +11,7 @@ class QpbStartRequest(BaseModel):
     runner: Literal["copilot", "claude", "codex", "cursor"] = "copilot"
     model: str | None = Field(default=None, max_length=120)
     council_roster: str | None = Field(default=None, max_length=500)
+    acknowledge_execution_risk: bool = False
 
 
 class Finding(BaseModel):

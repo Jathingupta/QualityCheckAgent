@@ -80,6 +80,8 @@ If a run fails, starting it again resumes from the first incomplete phase (or re
 
 ## Safety and limitations
 
+**Execution warning:** QPB Mode B invokes the selected local agent CLI in unattended mode. Depending on the CLI, the upstream runner uses broad tool approval (`copilot --allow-all`, Claude `--dangerously-skip-permissions`, Cursor `--force`; Codex uses `--sandbox workspace-write`). The UI requires an explicit trust acknowledgement before starting. Only run repositories you trust, and preferably run the backend under a dedicated account or isolated environment. The application does not provide a container sandbox around the agent CLI.
+
 Only public GitHub HTTPS URLs are accepted. Clone timeout and context/file limits are applied. Repository content is untrusted; prompt injection text in files must not be followed. The QPB preparation endpoint does not execute target-repository code. No phase is complete until its official evidence and gates have been implemented and verified. Do not analyze private company repositories until company approval and security/data-handling review.
 
 ## Checks
