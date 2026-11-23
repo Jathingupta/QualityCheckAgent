@@ -1,3 +1,6 @@
+import subprocess
+import sys
+
 import pytest
 from app import qpb_runner
 
@@ -77,3 +80,22 @@ def test_build_runner_command_rejects_out_of_order_phases(monkeypatch, tmp_path)
         qpb_runner.build_runner_command(
             tmp_path / "target", "copilot", phases=[4, 3, 5, 6]
         )
+
+
+def test_pinned_qpb_runner_cli_supports_application_flags():
+    checkout = qpb_runner.qpb_checkout()
+    runner = checkout / "bin" / "run_playbook.py"
+    assert runner.is_file(), "QPB submodule must be initialized in CI"
+
+    result = subprocess.run(
+        [sys.executable, str(runner), "--help"],
+        cwd=checkout,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    for flag in ("--copilot", "--phase", "--sequential", "--model", "--council-roster"):
+        assert flag in result.stdout
