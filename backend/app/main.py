@@ -1,3 +1,4 @@
+import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
@@ -128,3 +129,73 @@ def download_report_docx(report_id: str):
         )
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Report not found.") from exc
+
+from app.qpb_skill import inspect_skill, install_skill, status_dict
+
+@app.get("/api/qpb/skill")
+def qpb_skill_status():
+    return {
+        "version": "1.6.1",
+        "pinned_commit": "ee60d579ecf43ee000039736e4bb1edbabe0201a",
+        **status_dict(inspect_skill()),
+    }
+
+
+@app.post("/api/qpb/prepare")
+def qpb_prepare(request: AnalyzeRequest):
+    """Clone a target repository and install the pinned official QPB skill into it."""
+    run_id = uuid4().hex
+    workspace = Path(settings.workspace_dir).resolve()
+    target = workspace / "repositories" / f"qpb-{run_id}"
+    try:
+        repository_name = clone_repository(
+            str(request.repository_url), target, settings.clone_timeout_seconds
+        )
+        installed = install_skill(target)
+        run_dir = workspace / "qpb_runs" / run_id
+        run_dir.mkdir(parents=True, exist_ok=True)
+        state = {
+            "run_id": run_id,
+            "repository_url": str(request.repository_url),
+            "repository_name": repository_name,
+            "repository_path": str(target),
+            "skill": status_dict(installed),
+            "skill_fingerprint": __import__(
+                "app.qpb_skill", fromlist=["skill_fingerprint"]
+            ).skill_fingerprint(target / ".github" / "skills" / "quality-playbook"),
+            "status": "prepared",
+            "phases": [
+                {"number": n, "name": name, "status": "pending", "evidence": []}
+                for n, name in enumerate(
+                    ["Explore", "Generate", "Code Review", "Spec Audit",
+                     "Reconciliation", "Verify"], start=1
+                )
+            ],
+            "runtime_capabilities": {
+                "phase_context_isolation": "not_yet_configured",
+                "independent_auditor_providers": "not_yet_configured",
+                "shell_execution": "not_enabled",
+            },
+            "message": (
+                "Skill installed and validated. Phase execution has not started; "
+                "the app will not mark any phase complete without its official gates."
+            ),
+        }
+        (run_dir / "run.json").write_text(
+            json.dumps(state, indent=2), encoding="utf-8"
+        )
+        return state
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("QPB skill preparation failed")
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.get("/api/qpb/runs/{run_id}")
+def get_qpb_run(run_id: str):
+    run_file = Path(settings.workspace_dir).resolve() / "qpb_runs" / run_id / "run.json"
+    try:
+        return json.loads(run_file.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="QPB run not found.") from exc
