@@ -71,12 +71,12 @@ Open http://localhost:5173.
 - `GET /api/qpb/skill` — inspect the pinned QPB skill bundle
 - `POST /api/qpb/prepare` — clone a target and install the QPB skill
 - `GET /api/qpb/runtime` — detect the official runner and supported agent CLIs
-- `POST /api/qpb/runs/{run_id}/start` body `{"runner":"copilot"}` — start all six phases through the official runner
+- `POST /api/qpb/runs/{run_id}/start` body `{"runner":"copilot","acknowledge_execution_risk":true,"include_iterations":true}` — start all six phases and, by default, all four QPB iteration strategies; set `include_iterations` to `false` for phases only
 - `GET /api/qpb/runs` — list saved QPB runs (the frontend restores the latest run after reload)
 - `GET /api/qpb/runs/{run_id}` — retrieve the persistent preparation/phase record, checkpoints and gate verdict
 - `GET /api/qpb/runs/{run_id}/download` — download generated `quality/` artifacts and `AGENTS.md` as a ZIP
 
-If a run fails, starting it again resumes from the first incomplete phase (or re-runs Phase 6 if all phase checkboxes exist but the final gate failed). Create a new prepared run to start from Phase 1 again.
+If a run fails, the app offers a retry beginning at the first incomplete phase (or Phase 6 when all phase checkboxes exist but the final gate failed). Review the saved artifacts and runner log before retrying. Create a new prepared run for a clean run from Phase 1.
 
 ## Safety and limitations
 
