@@ -175,6 +175,7 @@ def qpb_prepare(request: AnalyzeRequest):
                 target / ".github" / "skills" / "quality-playbook"
             ),
             "status": "prepared",
+            "created_at": datetime.now(timezone.utc).isoformat(),
             "phases": [
                 {"number": n, "name": name, "status": "pending", "evidence": []}
                 for n, name in enumerate(
@@ -336,3 +337,18 @@ def download_qpb_artifacts(run_id: str):
         media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@app.get("/api/qpb/runs")
+def list_qpb_runs():
+    run_root = Path(settings.workspace_dir).resolve() / "qpb_runs"
+    if not run_root.is_dir():
+        return {"runs": []}
+    runs = []
+    for run_file in run_root.glob("*/run.json"):
+        try:
+            runs.append(json.loads(run_file.read_text(encoding="utf-8")))
+        except (OSError, json.JSONDecodeError):
+            logger.warning("Skipping unreadable QPB run record: %s", run_file)
+    runs.sort(key=lambda item: item.get("created_at", ""), reverse=True)
+    return {"runs": runs}
