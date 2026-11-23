@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import pytest
 
 from app import qpb_runner, qpb_skill
