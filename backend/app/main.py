@@ -4,12 +4,20 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, Response
 
 from app.analyzer import analyze_with_groq, normalize_findings
 from app.config import get_settings
+from app.qpb_runner import (
+    build_runner_command,
+    execute_qpb_run,
+    load_run,
+    qpb_checkout,
+    runner_availability,
+    save_run,
+)
 from app.qpb_skill import inspect_skill, install_skill, skill_fingerprint, status_dict
 from app.reports import (
     load_report,
@@ -19,7 +27,7 @@ from app.reports import (
     save_report,
 )
 from app.repository import clone_repository, read_repository_context
-from app.schemas import AnalysisReport, AnalyzeRequest
+from app.schemas import AnalysisReport, AnalyzeRequest, QpbStartRequest
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -172,9 +180,11 @@ def qpb_prepare(request: AnalyzeRequest):
                 )
             ],
             "runtime_capabilities": {
-                "phase_context_isolation": "not_yet_configured",
-                "independent_auditor_providers": "not_yet_configured",
-                "shell_execution": "not_enabled",
+                "official_mode_b_runner": True,
+                "available_agent_clis": runner_availability(),
+                "phase_context_isolation": "official QPB runner: separate phase subprocesses",
+                "phase_4_council": "delegated to configured QPB Council roster",
+                "phase_6_auditor": "fresh phase subprocess per QPB Mode B contract",
             },
             "message": (
                 "Skill installed and validated. Phase execution has not started; "
@@ -199,3 +209,68 @@ def get_qpb_run(run_id: str):
         return json.loads(run_file.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail="QPB run not found.") from exc
+
+
+@app.get("/api/qpb/runtime")
+def qpb_runtime_status():
+    return {
+        "official_runner_available": (qpb_checkout() / "bin" / "run_playbook.py").is_file(),
+        "agent_clis": runner_availability(),
+        "default_runner": "copilot",
+    }
+
+
+@app.post("/api/qpb/runs/{run_id}/start")
+def start_qpb_run(
+    run_id: str,
+    request: QpbStartRequest,
+    background_tasks: BackgroundTasks,
+):
+    workspace = Path(settings.workspace_dir).resolve()
+    try:
+        state = load_run(workspace, run_id)
+        if state.get("status") == "running":
+            raise HTTPException(status_code=409, detail="This QPB run is already running.")
+        target = Path(state["repository_path"]).resolve()
+        skill_status = inspect_skill(target / ".github" / "skills" / "quality-playbook")
+        if not skill_status.installed:
+            raise HTTPException(
+                status_code=409,
+                detail="The installed QPB skill is incomplete; reinstall it before execution.",
+            )
+        available = runner_availability()
+        if not available.get(request.runner, False):
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"The {request.runner} CLI was not detected on the backend PATH. "
+                    "Install it and authenticate in the same OS account that runs the backend."
+                ),
+            )
+        build_runner_command(target, request.runner, request.model, request.council_roster)
+        state.update({
+            "status": "running",
+            "runner": request.runner,
+            "model": request.model,
+            "council_roster": request.council_roster,
+            "message": "Official QPB Mode B execution has been queued.",
+        })
+        save_run(workspace, run_id, state)
+        background_tasks.add_task(
+            execute_qpb_run,
+            workspace,
+            run_id,
+            request.runner,
+            request.model,
+            request.council_roster,
+        )
+        return state
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="QPB run not found.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Could not start QPB run %s", run_id)
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
